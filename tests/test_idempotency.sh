@@ -3,6 +3,24 @@ set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Ensure agy is available in CI environments
+if ! command -v agy >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/agy-real" && ! -x "$HOME/.local/bin/agy" ]]; then
+  mkdir -p "$HOME/.local/bin"
+  cat << 'MOCK_AGY' > "$HOME/.local/bin/agy"
+#!/usr/bin/env bash
+if [[ "${1:-}" == "--version" ]]; then
+  echo "1.1.17"
+  exit 0
+fi
+if [[ "${1:-}" == "plugin" ]]; then
+  exit 0
+fi
+echo "MOCK AGY RUN: $@"
+MOCK_AGY
+  chmod +x "$HOME/.local/bin/agy"
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
 echo "=== Testing Installation Idempotency ==="
 
 # First installation
