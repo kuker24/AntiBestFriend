@@ -60,23 +60,29 @@ OWN_EOF
 
 gbfc_swap_skills() {
   local stage="$(gbfc_stage_root)/antigravity-bestfriend"
-  local target_plugin="$GBFC_PLUGIN_DIR"
 
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
-    gbfc_info "WOULD_INSTALL_PLUGIN -> $target_plugin"
+    gbfc_info "WOULD_INSTALL_PLUGIN -> agy plugin install $stage"
     return 0
   fi
 
-  rm -rf -- "$target_plugin"
-  mkdir -p -- "$(dirname -- "$target_plugin")"
-  cp -a -- "$stage" "$target_plugin"
+  # Uninstall existing if present
+  if agy plugin list 2>/dev/null | grep -q "antigravity-bestfriend"; then
+    agy plugin uninstall "antigravity-bestfriend" 2>/dev/null || true
+  fi
+
+  # Install using native Antigravity lifecycle
+  agy plugin install "$stage" || gbfc_die "agy plugin install failed for $stage"
+
+  # Ensure it is enabled
+  agy plugin enable "antigravity-bestfriend" 2>/dev/null || true
 
   # Also ensure managed runtime backup has skills & rules
   mkdir -p -- "$GBFC_MANAGED/skills" "$GBFC_MANAGED/rules"
   cp -a -- "$stage/skills/"* "$GBFC_MANAGED/skills/" 2>/dev/null || true
   cp -a -- "$stage/rules/"* "$GBFC_MANAGED/rules/" 2>/dev/null || true
 
-  gbfc_info "Installed 40 skills into Antigravity runtime"
+  gbfc_info "Installed 40 skills via native Antigravity plugin lifecycle"
 }
 
 gbfc_install_router() {

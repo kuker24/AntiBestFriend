@@ -1,11 +1,10 @@
-"""Context Guard: PREVENT > REDUCE > OFFLOAD > CIRCUIT BREAK > AUTOCOMPACT."""
+"""Context Guard: image budgeting hook for Antigravity CLI (PreToolUse)."""
 
 PRODUCT = "antigravity-bestfriend"
 HOOK_BIN_NAME = "agy-context-guard"
 OWNED_EVENTS = (
     "PreToolUse",
     "PostToolUse",
-    "PostToolBatch",
-    "UserPromptSubmit",
-    "PostCompact",
+    "PreInvocation",
+    "Stop",
 )

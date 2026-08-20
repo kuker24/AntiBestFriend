@@ -143,7 +143,8 @@ gbfc_doctor() {
   echo "--- 4. MCP SERVERS (EXACT 4, ZERO EXA) ---"
   local mcp_cfg="$GBFC_AGY_CONFIG/mcp_config.json"
   if [[ -f "$mcp_cfg" ]]; then
-    python3 - "$mcp_cfg" <<'PY'
+    local mcp_output
+    mcp_output="$(python3 - "$mcp_cfg" <<'PY'
 import json, sys
 from pathlib import Path
 
@@ -152,10 +153,9 @@ try:
     data = json.loads(p.read_text(encoding="utf-8"))
     servers = data.get("mcpServers", {})
 except Exception as e:
-    print(f"FAIL: Malformed mcp_config.json: {e}")
-    raise SystemExit(1)
+    print(f"FAIL mcp_config Malformed mcp_config.json: {e}")
+    raise SystemExit(0)
 
-# 1. codebase-memory-mcp
 if "codebase-memory-mcp" in servers:
     cmd = servers["codebase-memory-mcp"].get("command", "")
     if cmd and Path(cmd).is_file():
@@ -165,14 +165,12 @@ if "codebase-memory-mcp" in servers:
 else:
     print("FAIL codebase_memory missing in mcpServers")
 
-# 2. context7
 if "context7" in servers:
     url = servers["context7"].get("serverUrl", "")
     print(f"PASS context7 {url}")
 else:
     print("FAIL context7 missing in mcpServers")
 
-# 3. shadcn
 if "shadcn" in servers:
     cmd = servers["shadcn"].get("command", "")
     args = " ".join(servers["shadcn"].get("args", []))
@@ -180,7 +178,6 @@ if "shadcn" in servers:
 else:
     print("FAIL shadcn missing in mcpServers")
 
-# 4. serena
 if "serena" in servers:
     dis = servers["serena"].get("disabled", False)
     if dis:
@@ -190,12 +187,19 @@ if "serena" in servers:
 else:
     print("FAIL serena missing in mcpServers")
 
-# 5. Exa verification (must be ABSENT)
 if "exa" in servers:
-    print("FAIL exa EXA_IS_FORBIDDEN (detected in mcpServers)")
+    print("FAIL exa_absent EXA_IS_FORBIDDEN (detected in mcpServers)")
 else:
     print("PASS exa_absent confirmed zero Exa configured")
 PY
+    )"
+    while IFS= read -r line; do
+      local mcp_status mcp_label mcp_detail
+      mcp_status="$(echo "$line" | awk '{print $1}')"
+      mcp_label="$(echo "$line" | awk '{print $2}')"
+      mcp_detail="$(echo "$line" | cut -d' ' -f3-)"
+      gbfc_check "$mcp_status" "$mcp_label" "$mcp_detail"
+    done <<< "$mcp_output"
   else
     gbfc_check FAIL "mcp_config" "missing $mcp_cfg"
   fi

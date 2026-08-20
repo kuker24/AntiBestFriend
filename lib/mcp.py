@@ -215,6 +215,8 @@ def main() -> int:
     parser.add_argument("--policy", default="")
     parser.add_argument("--out", default="")
     parser.add_argument("--src", default="")
+    parser.add_argument("--enable", action="store_true", default=False)
+    parser.add_argument("--disable", action="store_true", default=False)
     args = parser.parse_args()
 
     policy = {}
@@ -235,6 +237,13 @@ def main() -> int:
         return 0
     if args.cmd == "add":
         wanted = (policy.get("servers") or {}).get(args.name) or {}
+        if args.enable:
+            wanted = dict(wanted)
+            wanted["enabled"] = True
+            wanted.pop("disabled", None)
+        elif args.disable:
+            wanted = dict(wanted)
+            wanted["enabled"] = False
         return ensure_server(args.name, wanted)
     if args.cmd == "remove":
         return remove_server(args.name)

@@ -89,6 +89,30 @@ gbfc_install_codebase_memory() {
   gbfc_info "codebase-memory $version installed ($artifact_source)"
 }
 
+gbfc_install_serena() {
+  local version package
+  version="$(gbfc_source_field serena version)"
+  package="$(gbfc_source_field serena package)"
+  
+  if [[ "$GBFC_DRY_RUN" == 1 ]]; then
+    gbfc_info "WOULD_INSTALL serena $version via uv"
+    return 0
+  fi
+  
+  if ! gbfc_have uv; then
+    gbfc_warn "uv not found; skipping serena installation. Serena MCP will fail until installed."
+    return 0
+  fi
+  
+  if uv tool list 2>/dev/null | grep -q "$package v$version"; then
+    gbfc_info "serena $version already installed via uv"
+    return 0
+  fi
+  
+  gbfc_info "Installing serena $version..."
+  uv tool install "$package==$version" || gbfc_warn "failed to install serena via uv"
+}
+
 gbfc_install_helper_bins() {
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
     gbfc_info "WOULD_INSTALL helpers"

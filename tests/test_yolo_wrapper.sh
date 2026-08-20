@@ -5,50 +5,33 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# Create mock real binary
-REAL_BIN="$TMP/agy-real"
+export HOME="$TMP"
+mkdir -p "$HOME/.local/bin"
+
+# Source wrapper lib
+source "$ROOT/lib/common.sh"
+source "$ROOT/lib/wrapper.sh"
+REAL_BIN="$HOME/.local/bin/agy-real"
 cat << 'MOCK_EOF' > "$REAL_BIN"
 #!/usr/bin/env bash
+if [[ "${1:-}" == "--version" ]]; then
+  echo "1.1.17"
+  exit 0
+fi
+if [[ "${1:-}" == "--help" ]]; then
+  echo "Usage: agy [OPTIONS]"
+  echo "  --dangerously-skip-permissions  Skip permission checks"
+  exit 0
+fi
 echo "RECEIVED: $@"
 MOCK_EOF
 chmod +x "$REAL_BIN"
 
-# Create production wrapper
-WRAPPER="$TMP/agy"
-cat << 'WRAPPER_EOF' > "$WRAPPER"
-#!/usr/bin/env bash
-# ANTIBESTFRIEND-AGY-WRAPPER
-set -euo pipefail
+# Install production wrapper
+gbfc_install_agy_yolo_wrapper
 
-REAL_AGY="${REAL_AGY}"
-UPSTREAM_FLAG="--dangerously-skip-permissions"
-
-args=()
-has_permission_bypass=0
-
-for arg in "$@"; do
-  case "$arg" in
-    --yolo|-y)
-      if [[ $has_permission_bypass -eq 0 ]]; then
-        args+=("$UPSTREAM_FLAG")
-        has_permission_bypass=1
-      fi
-      ;;
-    --dangerously-skip-permissions)
-      if [[ $has_permission_bypass -eq 0 ]]; then
-        args+=("$arg")
-        has_permission_bypass=1
-      fi
-      ;;
-    *)
-      args+=("$arg")
-      ;;
-  esac
-done
-
-exec "$REAL_AGY" "${args[@]}"
-WRAPPER_EOF
-chmod +x "$WRAPPER"
+WRAPPER="$HOME/.local/bin/agy"
+[[ -x "$WRAPPER" ]] || { echo "FAIL: wrapper not installed"; exit 1; }
 
 # 1. Normal invocation
 OUT="$(REAL_AGY="$REAL_BIN" "$WRAPPER" -p "hello world")"

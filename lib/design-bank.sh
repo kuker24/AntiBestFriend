@@ -52,28 +52,40 @@ gbfc_design_bank_download() {
     return 0
   fi
 
-  mkdir -p -- "$dest"
+  mkdir -p -- "$(dirname -- "$dest")"
   stage="$(mktemp -d)"
   archive="$stage/Design-bank.tgz"
   if ! gbfc_download "$url" "$archive" "$expected"; then
     rm -rf -- "$stage"
     return 1
   fi
-  tar -xzf "$archive" -C "$dest"
-  rm -rf -- "$stage"
-  if gbfc_design_bank_ok "$dest"; then
+  
+  # Atomic extraction + validation
+  local extract_stage="$stage/extract"
+  mkdir -p "$extract_stage"
+  tar -xzf "$archive" -C "$extract_stage"
+  
+  # Check if nested (sometimes tarballs include the top level directory)
+  local effective_root="$extract_stage"
+  if gbfc_design_bank_ok "$extract_stage"; then
+    effective_root="$extract_stage"
+  else
+    local nested
+    nested="$(find "$extract_stage" -mindepth 1 -maxdepth 3 -type f -path '*/Refero/bank/catalog.json' | head -n 1 || true)"
+    if [[ -n "$nested" ]]; then
+      effective_root="$(cd -- "$(dirname -- "$nested")/../.." && pwd)"
+    fi
+  fi
+  
+  if gbfc_design_bank_ok "$effective_root"; then
+    rm -rf -- "$dest"
+    mv -T -- "$effective_root" "$dest"
+    rm -rf -- "$stage"
     printf '%s\n' "$dest"
     return 0
   fi
-  local nested
-  nested="$(find "$dest" -mindepth 2 -maxdepth 4 -type f -path '*/Refero/bank/catalog.json' | head -n 1 || true)"
-  if [[ -n "$nested" ]]; then
-    nested="$(cd -- "$(dirname -- "$nested")/../.." && pwd)"
-    if gbfc_design_bank_ok "$nested"; then
-      printf '%s\n' "$nested"
-      return 0
-    fi
-  fi
+  
+  rm -rf -- "$stage"
   return 1
 }
 

@@ -105,12 +105,14 @@ def replace_all(text: str, pairs: list[tuple[str, str]]) -> str:
 def rewrite_impeccable_paths(dest: Path) -> None:
     replacements = [
         ("node .grok/skills/impeccable/scripts/", "node <skill-base-dir>/scripts/"),
-        (".grok/skills/impeccable/scripts", "~/.gemini/config/plugins/antigravity-bestfriend/skills/impeccable/scripts"),
+        (".grok/skills/impeccable/scripts", "~/.gemini/antigravity-cli/plugins/antigravity-bestfriend/skills/impeccable/scripts"),
         ("Bash(node .grok/skills/impeccable/scripts/*)", "run_command(node *impeccable/scripts/*)"),
-        ("$HOME/.grok/skills/impeccable", "$HOME/.gemini/config/plugins/antigravity-bestfriend/skills/impeccable"),
-        ("~/.grok/skills/impeccable", "~/.gemini/config/plugins/antigravity-bestfriend/skills/impeccable"),
-        ("$HOME/.claude/skills/impeccable", "$HOME/.gemini/config/plugins/antigravity-bestfriend/skills/impeccable"),
-        ("~/.claude/skills/impeccable", "~/.gemini/config/plugins/antigravity-bestfriend/skills/impeccable"),
+        ("Bash(python3 *design-intelligence.py", "run_command(python3 *design-intelligence.py"),
+        ("<skill-base-dir>/scripts/design-intelligence.py", "$HOME/.gemini/antigravity-bestfriend/scripts/design-intelligence.py"),
+        ("$HOME/.grok/skills/impeccable", "$HOME/.gemini/antigravity-cli/plugins/antigravity-bestfriend/skills/impeccable"),
+        ("~/.grok/skills/impeccable", "~/.gemini/antigravity-cli/plugins/antigravity-bestfriend/skills/impeccable"),
+        ("$HOME/.claude/skills/impeccable", "$HOME/.gemini/antigravity-cli/plugins/antigravity-bestfriend/skills/impeccable"),
+        ("~/.claude/skills/impeccable", "~/.gemini/antigravity-cli/plugins/antigravity-bestfriend/skills/impeccable"),
     ]
     for path in dest.rglob("*"):
         if not path.is_file():
@@ -330,6 +332,8 @@ def apply_skill(dest: Path, name: str, prepend: str | None) -> None:
 
     # Universal path and residue replacements
     extras.extend([
+        ("~/.claude/grokbestfriend-claude/config/model-pool.json", "~/.gemini/antigravity-bestfriend/config/model-pool.json"),
+        ("$HOME/.claude/grokbestfriend-claude/config/model-pool.json", "$HOME/.gemini/antigravity-bestfriend/config/model-pool.json"),
         ("~/.claude/grokbestfriend-claude/rules/", "~/.gemini/antigravity-bestfriend/rules/"),
         ("$HOME/.claude/grokbestfriend-claude/rules/", "$HOME/.gemini/antigravity-bestfriend/rules/"),
         ("~/.claude/grokbestfriend-claude/", "~/.gemini/antigravity-bestfriend/"),
@@ -372,6 +376,12 @@ def apply_skill(dest: Path, name: str, prepend: str | None) -> None:
                 ("~/.claude/grokbestfriend-claude/", "~/.gemini/antigravity-bestfriend/"),
                 ("$HOME/.claude/grokbestfriend-claude/", "$HOME/.gemini/antigravity-bestfriend/"),
                 ("~/.claude/skills/", "~/.gemini/config/plugins/antigravity-bestfriend/skills/"),
+                ("$HOME/.claude/skills/", "$HOME/.gemini/config/plugins/antigravity-bestfriend/skills/"),
+                ("~/.claude/projects/", "~/.gemini/antigravity-bestfriend/projects/"),
+                ("$HOME/.claude/projects/", "$HOME/.gemini/antigravity-bestfriend/projects/"),
+                ("~/.cursor/projects/", "~/.gemini/antigravity-bestfriend/projects/"),
+                ("grokbestfriend-claude", "antigravity-bestfriend"),
+                ("model-pool.json", "model-pool.json"),
                 ("grok-chromium-cdp", "agy-chromium-cdp"),
                 ("claude-chromium-cdp", "agy-chromium-cdp"),
                 ("$HOME/.grok/bin/claude-chromium-cdp", "$HOME/.gemini/antigravity-bestfriend/bin/agy-chromium-cdp"),

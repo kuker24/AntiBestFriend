@@ -173,6 +173,11 @@ gbfc_package_self_contained_runtime() {
   cp -a -- "$GBFC_ROOT/overlays/"* "$GBFC_MANAGED/overlays/" 2>/dev/null || true
   cp -a -- "$GBFC_ROOT/runtime/"* "$GBFC_MANAGED/runtime/" 2>/dev/null || true
   cp -a -- "$GBFC_ROOT/VERSION" "$GBFC_MANAGED/VERSION"
+  cp -a -- "$GBFC_ROOT/uninstall.sh" "$GBFC_MANAGED/uninstall.sh"
+
+  # Record source commit for self-contained runtime
+  mkdir -p -- "$GBFC_MANAGED/config"
+  gbfc_source_commit > "$GBFC_MANAGED/config/source-commit.txt"
 
   gbfc_info "Self-contained managed runtime packaged in $GBFC_MANAGED"
 }
@@ -209,6 +214,7 @@ gbfc_run_install() {
 
   gbfc_package_self_contained_runtime
   gbfc_install_codebase_memory
+  gbfc_install_serena
   gbfc_install_helper_bins
   gbfc_tx_set_state WRAPPER_CONFIGURED
   gbfc_check_fault WRAPPER_CONFIGURED

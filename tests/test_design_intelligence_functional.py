@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory() as tmp:
     (motion_dir / "catalog.json").write_text(json.dumps(motion_catalog, indent=2))
 
     # Verify catalog resolution
-    resolved = catalog.resolve_bank(tmp_path)
+    resolved = catalog.resolve_bank(None, env={"ANTIGRAVITY_DESIGN_BANK": str(tmp_path)})
     assert resolved == tmp_path, "Resolved bank root mismatch"
-
+    
     print("PASS: test_design_intelligence_functional")

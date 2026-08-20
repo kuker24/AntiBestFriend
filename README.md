@@ -8,11 +8,11 @@
 ## 🌟 Key Capabilities
 
 1. **Native Antigravity Integration**: Runs directly on top of `agy` (v1.1.17+) with Google authentication. Zero 9router, zero foreign model gateways.
-2. **Native `agy --yolo` Mode**: Execute `agy --yolo` (or `agy -y`) anywhere to immediately launch in full bypass-permissions mode (`--dangerously-skip-permissions`) with all BestFriend skills active.
+2. **Native `agy --yolo` Mode**: Execute `agy --yolo` (or `agy -y`) anywhere to immediately launch in full bypass-permissions mode (`--dangerously-skip-permissions`). Skills are loaded progressively on demand.
 3. **All 40 Specialized Skills**: Complete preservation of 24 model-routed and 16 manual-only skills with progressive disclosure (no token explosion).
-4. **Exactly 4 MCP Servers**: `codebase-memory-mcp` (v0.9.0), `context7` (HTTP documentation), `shadcn` (pinned 4.18.0 UI registry), and `serena` (semantic code intelligence). **Exa is strictly omitted** in favor of native Google search capabilities.
-5. **Full Design Ecosystem**: End-to-end integration of Design Bank (`Refero` + `motionsites`), Design Intelligence ranking engine, and UI specialists (`found-this-design`, `impeccable`, `emil-design-eng`, `visual-studio`, `scroll-world`).
-6. **Context Guard Lifecycle Hooks**: Native Antigravity lifecycle hook adapter for image budgeting, output reduction, and circuit breaking.
+4. **Exactly 4 MCP Servers**: `codebase-memory-mcp` (v0.9.0), `context7` (HTTP documentation), `shadcn` (pinned 4.18.0 UI registry), and `serena` (semantic code intelligence, on-demand). **Exa is strictly omitted** in favor of native Google search capabilities.
+5. **Full Design Ecosystem**: End-to-end integration of Design Bank (`Refero` + `motionsites`), Design Intelligence ranking engine, and UI specialists (`found-this-design`, `impeccable`, `emil-design-eng`, `visual-studio`, `scroll-world`). Design Bank location is discovered at install time via `$ANTIGRAVITY_DESIGN_BANK`, `$GROK_DESIGN_BANK`, or standard `~/Design` fallback.
+6. **Context Guard Lifecycle Hooks**: Native Antigravity `PreToolUse` hook adapter for image budgeting (one image per batch, size caps, derived fallbacks).
 7. **Isolated Chromium CDP**: Headless Chromium runner on `http://127.0.0.1:9223` with isolated sandbox profile (strictly rejecting personal Google Chrome).
 8. **Transactional Reliability**: Fail-closed transactional installer with atomic snapshotting, idempotency, backup, and rollback.
 

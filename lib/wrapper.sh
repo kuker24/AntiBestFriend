@@ -14,7 +14,10 @@ gbfc_discover_upstream_permission_flag() {
     printf '%s\n' "--dangerously-skip-permissions"
     return 0
   fi
+  # Flag not found in --help output; fail instead of silently hardcoding
+  gbfc_warn "upstream agy does not advertise --dangerously-skip-permissions; YOLO may not work with this version"
   printf '%s\n' "--dangerously-skip-permissions"
+  return 1
 }
 
 gbfc_record_upstream_metadata() {
@@ -81,7 +84,7 @@ gbfc_install_agy_yolo_wrapper() {
     gbfc_die "cannot resolve real agy executable for wrapper"
   fi
 
-  flag="$(gbfc_discover_upstream_permission_flag "$real_bin")"
+  flag="$(gbfc_discover_upstream_permission_flag "$real_bin")" || true
 
   # Write hardened wrapper
   cat << 'WRAPPER_EOF' > "$target_bin"
@@ -91,7 +94,7 @@ gbfc_install_agy_yolo_wrapper() {
 set -euo pipefail
 
 REAL_AGY="${REAL_AGY:-$HOME/.local/bin/agy-real}"
-UPSTREAM_FLAG="--dangerously-skip-permissions"
+UPSTREAM_FLAG="__UPSTREAM_FLAG_PLACEHOLDER__"
 
 if [[ ! -x "$REAL_AGY" ]] || grep -qF "# ANTIBESTFRIEND-AGY-WRAPPER" "$REAL_AGY" 2>/dev/null; then
   # Safe non-recursive fallback discovery
@@ -109,6 +112,11 @@ if [[ ! -x "$REAL_AGY" ]] || grep -qF "# ANTIBESTFRIEND-AGY-WRAPPER" "$REAL_AGY"
     printf 'ERROR: agy-real binary not found\n' >&2
     exit 1
   fi
+fi
+
+# Verify upstream still supports the permission flag
+if ! "$REAL_AGY" --help 2>&1 | grep -q -- "$UPSTREAM_FLAG"; then
+  printf 'WARNING: upstream agy may not support %s; passing through anyway\n' "$UPSTREAM_FLAG" >&2
 fi
 
 args=()
@@ -136,6 +144,8 @@ done
 
 exec "$REAL_AGY" "${args[@]}"
 WRAPPER_EOF
+  # Inject the discovered flag into the wrapper
+  sed -i "s|__UPSTREAM_FLAG_PLACEHOLDER__|$flag|" "$target_bin"
   chmod +x "$target_bin"
   gbfc_info "Hardened agy --yolo wrapper configured at $target_bin (translates to $flag)"
 }

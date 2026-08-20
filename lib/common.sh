@@ -43,7 +43,12 @@ gbfc_source_commit() {
     git -C "$GBFC_ROOT" rev-parse HEAD
     return 0
   fi
-  printf '%s\n' "05e6fdcdb70fe7f4420827e4df1a360f2152700c"
+  # No .git directory; check for packaged commit stamp
+  if [[ -f "$GBFC_MANAGED/config/source-commit.txt" ]]; then
+    cat "$GBFC_MANAGED/config/source-commit.txt"
+  else
+    printf '%s\n' "unknown"
+  fi
 }
 
 gbfc_sha256_file() {

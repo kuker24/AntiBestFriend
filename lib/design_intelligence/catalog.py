@@ -37,10 +37,11 @@ def resolve_bank(explicit: str | None, env: dict[str, str] | None = None, home: 
     environ = env if env is not None else os.environ
     if explicit:
         return Path(explicit).expanduser()
-    if environ.get("GROK_DESIGN_INTELLIGENCE_BANK"):
-        return Path(environ["GROK_DESIGN_INTELLIGENCE_BANK"]).expanduser()
+    for var in ("ANTIGRAVITY_DESIGN_BANK", "GROK_DESIGN_BANK", "CLAUDE_DESIGN_BANK", "GROK_DESIGN_INTELLIGENCE_BANK"):
+        if environ.get(var):
+            return Path(environ[var]).expanduser()
     root = home if home is not None else Path.home()
-    return root / "DesignIntelligence"
+    return root / "Design"
 
 
 def bank_dirs(bank: Path) -> dict[str, Path]:

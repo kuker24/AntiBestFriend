@@ -65,6 +65,8 @@ case "$cmd" in
   uninstall)
     if [[ -f "$GBFC_ROOT/uninstall.sh" ]]; then
       exec "$GBFC_ROOT/uninstall.sh" "$@"
+    elif [[ -f "$ROOT/uninstall.sh" ]]; then
+      exec "$ROOT/uninstall.sh" "$@"
     else
       gbfc_die "uninstall script not found"
     fi
@@ -137,11 +139,11 @@ case "$cmd" in
         python3 "$ROOT/lib/mcp.py" classify --name serena --policy "$GBFC_MANAGED/vendor/mcp-policy.json"
         ;;
       enable)
-        python3 "$ROOT/lib/mcp.py" add --name serena --policy "$GBFC_MANAGED/vendor/mcp-policy.json"
+        python3 "$ROOT/lib/mcp.py" add --name serena --policy "$GBFC_MANAGED/vendor/mcp-policy.json" --enable
         echo "serena MCP enabled in Antigravity."
         ;;
       disable)
-        python3 "$ROOT/lib/mcp.py" remove --name serena
+        python3 "$ROOT/lib/mcp.py" add --name serena --policy "$GBFC_MANAGED/vendor/mcp-policy.json" --disable
         echo "serena MCP disabled."
         ;;
       *) echo "Usage: agy-bestfriend serena status|enable|disable" >&2; exit 2 ;;
