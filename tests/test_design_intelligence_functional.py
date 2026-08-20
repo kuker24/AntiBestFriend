@@ -49,4 +49,25 @@ with tempfile.TemporaryDirectory() as tmp:
     resolved = catalog.resolve_bank(None, env={"ANTIGRAVITY_DESIGN_BANK": str(tmp_path)})
     assert resolved == tmp_path, "Resolved bank root mismatch"
     
+    pol = policy.load_policy()
+    tax = policy.load_taxonomy()
+    
+    # Test catalog rebuild
+    catalog.rebuild(tmp_path, policy=pol, taxonomy=tax)
+    
+    # Test doctor
+    doc_result = doctor.doctor(tmp_path, pol, {})
+    assert doc_result["status"] in ("OK", "UNAVAILABLE_MISSING", "DEGRADED"), f"Unexpected doctor status: {doc_result['status']}"
+    
+    # Test search & rank
+    # Note: Because the fixture items lack actual image files, they might be dropped from the FTS index or filtered out.
+    # The goal of this functional test is to ensure the pipeline components (rank, selection) can execute
+    # end-to-end without crashing or raising exceptions against a constructed catalog.
+    search_res = rank.search_bank(tmp_path, kind="all", query="dark", policy=pol, allowlist=set())
+    assert "results" in search_res
+    
+    # Test selection / planning
+    plan = selection.plan_retrieval("Create a dark mode landing page", "dark theme", "persuade", [])
+    assert "query" in plan
+    
     print("PASS: test_design_intelligence_functional")

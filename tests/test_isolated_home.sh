@@ -17,6 +17,10 @@ if [[ "${1:-}" == "--version" ]]; then
   echo "1.1.17"
   exit 0
 fi
+if [[ "${1:-}" == "--help" ]]; then
+  echo "  --dangerously-skip-permissions  Skip permission checks"
+  exit 0
+fi
 if [[ "${1:-}" == "plugin" ]]; then
   if [[ "${2:-}" == "install" ]]; then
     mkdir -p "$HOME/.gemini/config/plugins/antigravity-bestfriend"

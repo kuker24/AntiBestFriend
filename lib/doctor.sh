@@ -95,10 +95,13 @@ gbfc_doctor() {
   # Layer 3: Native Antigravity Plugin & Skills
   # -------------------------------------------------------------
   echo "--- 3. PLUGIN & SKILLS DISCOVERY ---"
-  if [[ -f "$GBFC_PLUGIN_DIR/plugin.json" ]]; then
-    gbfc_check PASS "plugin_manifest" "$GBFC_PLUGIN_DIR/plugin.json"
+  local resolved_plugin_dir
+  resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
+
+  if [[ -f "$resolved_plugin_dir/plugin.json" ]]; then
+    gbfc_check PASS "plugin_manifest" "$resolved_plugin_dir/plugin.json"
   else
-    gbfc_check FAIL "plugin_manifest" "missing $GBFC_PLUGIN_DIR/plugin.json"
+    gbfc_check FAIL "plugin_manifest" "missing $resolved_plugin_dir/plugin.json"
   fi
 
   if command -v agy >/dev/null 2>&1; then
@@ -111,7 +114,7 @@ gbfc_doctor() {
     fi
   fi
 
-  if [[ -d "$GBFC_PLUGIN_DIR/skills" ]]; then
+  if [[ -d "$resolved_plugin_dir/skills" ]]; then
     local allowlist_path="$GBFC_ROOT/vendor/skill-allowlist.txt"
     [[ -f "$allowlist_path" ]] || allowlist_path="$GBFC_MANAGED/vendor/skill-allowlist.txt"
     local policy_path="$GBFC_ROOT/vendor/skill-policy.json"
@@ -119,7 +122,7 @@ gbfc_doctor() {
 
     local rep
     rep="$(python3 "$GBFC_ROOT/lib/validate_skills.py" \
-      --skills "$GBFC_PLUGIN_DIR/skills" \
+      --skills "$resolved_plugin_dir/skills" \
       --allowlist "$allowlist_path" \
       --policy "$policy_path" 2>&1)"
     if [[ $? -eq 0 ]]; then
@@ -128,7 +131,7 @@ gbfc_doctor() {
       gbfc_check FAIL "skills_parity" "$rep"
     fi
   else
-    gbfc_check FAIL "skills_dir" "missing $GBFC_PLUGIN_DIR/skills"
+    gbfc_check FAIL "skills_dir" "missing $resolved_plugin_dir/skills"
   fi
 
   if [[ -f "$GBFC_GLOBAL_ROUTER" ]] && grep -q "ANTIGRAVITY-BESTFRIEND:BEGIN" "$GBFC_GLOBAL_ROUTER"; then
@@ -179,11 +182,16 @@ else:
     print("FAIL shadcn missing in mcpServers")
 
 if "serena" in servers:
-    dis = servers["serena"].get("disabled", False)
-    if dis:
-        print("CONFIGURED_DISABLED serena on-demand (disabled by default)")
+    import shutil
+    serena_path = shutil.which("serena") or shutil.which("serena", path=str(Path.home() / ".local" / "bin"))
+    if serena_path:
+        dis = servers["serena"].get("disabled", False)
+        if dis:
+            print("CONFIGURED_DISABLED serena on-demand (disabled by default)")
+        else:
+            print("PASS serena enabled")
     else:
-        print("PASS serena enabled")
+        print("FAIL serena serena binary not found in PATH or ~/.local/bin")
 else:
     print("FAIL serena missing in mcpServers")
 

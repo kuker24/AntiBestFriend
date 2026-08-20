@@ -12,6 +12,10 @@ if [[ "${1:-}" == "--version" ]]; then
   echo "1.1.17"
   exit 0
 fi
+if [[ "${1:-}" == "--help" ]]; then
+  echo "  --dangerously-skip-permissions  Skip permission checks"
+  exit 0
+fi
 if [[ "${1:-}" == "plugin" ]]; then
   if [[ "${2:-}" == "install" ]]; then
     mkdir -p "$HOME/.gemini/config/plugins/antigravity-bestfriend"
@@ -31,8 +35,26 @@ fi
 
 echo "=== Testing Transactional Fault Injection & Rollback ==="
 
+# Helper to hash only transactional files
+hash_state() {
+  local paths=(
+    "$HOME/.gemini/config/mcp_config.json"
+    "$HOME/.gemini/config/hooks.json"
+    "$HOME/.gemini/GEMINI.md"
+    "$HOME/.local/bin/agy"
+    "$HOME/.local/bin/agy-real"
+    "$HOME/.gemini/config/plugins/antigravity-bestfriend"
+    "$HOME/.gemini/antigravity-cli/plugins/antigravity-bestfriend"
+    "$HOME/.gemini/antigravity-bestfriend/config/mcp-ownership.json"
+    "$HOME/.gemini/antigravity-bestfriend/config/design-bank.json"
+  )
+  for p in "${paths[@]}"; do
+    [[ -e "$p" ]] && find "$p" -type f -exec sha256sum {} + 2>/dev/null
+  done | sort | sha256sum | awk '{print $1}'
+}
+
 # Get baseline state
-baseline_hash="$(find "$HOME/.gemini" -type f -not -path "*/backups/*" -not -path "*/tx/*" -exec sha256sum {} + 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+baseline_hash="$(hash_state)"
 
 for fault_state in PREPARING BACKED_UP WRAPPER_CONFIGURED SKILLS_CONFIGURED RULES_CONFIGURED DESIGN_CONFIGURED MCP_CONFIGURED HOOKS_CONFIGURED VERIFIED; do
   echo "Testing fault at state: $fault_state"
@@ -47,14 +69,11 @@ for fault_state in PREPARING BACKED_UP WRAPPER_CONFIGURED SKILLS_CONFIGURED RULE
     exit 1
   }
   
-  recovered_hash="$(find "$HOME/.gemini" -type f -not -path "*/backups/*" -not -path "*/tx/*" -exec sha256sum {} + 2>/dev/null | sort | sha256sum | awk '{print $1}')"
+  recovered_hash="$(hash_state)"
   
   if [[ "$baseline_hash" != "$recovered_hash" ]]; then
-    # Some jitter might occur on initial baseline vs recovery if timestamps or PID logs differ.
-    # However, the core files must match.
-    # We will warn instead of failing immediately to avoid flaky CI on timestamp changes,
-    # but check if crucial plugin files actually reverted.
-    echo "WARNING: State hash drifted after recovery ($baseline_hash -> $recovered_hash)"
+    echo "FAIL: State hash drifted after recovery ($baseline_hash -> $recovered_hash)"
+    exit 1
   fi
 done
 

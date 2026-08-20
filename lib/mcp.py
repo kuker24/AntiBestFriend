@@ -107,9 +107,24 @@ def resolve_spec(spec: dict) -> dict:
     return resolved
 
 
+def specs_equivalent(s1: dict, s2: dict) -> bool:
+    def canonicalize(s):
+        c = {k: v for k, v in s.items() if k not in ("disabled", "autoApprove")}
+        if "args" in c and isinstance(c["args"], list):
+            c["args"] = list(c["args"])
+        if "env" in c and isinstance(c["env"], dict):
+            c["env"] = {k: str(v) for k, v in c["env"].items()}
+        return c
+    return canonicalize(s1) == canonicalize(s2)
+
+
 def classify(name: str, wanted: dict) -> dict:
     if name == "exa":
         return {"name": "exa", "state": "FORBIDDEN_OMITTED"}
+    return check_server(name, wanted)
+
+
+def check_server(name: str, wanted: dict) -> dict:
     cfg, err = load_raw_json(mcp_config_path())
     if err:
         return {"name": name, "state": "INVALID_CONFIG", "error": err}
@@ -118,14 +133,15 @@ def classify(name: str, wanted: dict) -> dict:
     if name not in servers:
         return {"name": name, "state": "MISSING"}
     existing = servers[name]
-    if name in own:
-        return {"name": name, "state": "EXISTING_OWNED", "info": existing}
-
-    # Compare with wanted spec
     resolved = resolve_spec(wanted)
-    if resolved.get("serverUrl") and existing.get("serverUrl") == resolved["serverUrl"]:
-        return {"name": name, "state": "EXISTING_EQUIVALENT_FOREIGN", "info": existing}
-    if resolved.get("command") and existing.get("command") == resolved["command"]:
+
+    if name in own:
+        recorded_spec = own[name].get("spec", {})
+        if specs_equivalent(existing, recorded_spec) or specs_equivalent(existing, resolved):
+            return {"name": name, "state": "EXISTING_OWNED", "info": existing}
+        return {"name": name, "state": "OWNERSHIP_DRIFT", "info": existing}
+
+    if specs_equivalent(existing, resolved):
         return {"name": name, "state": "EXISTING_EQUIVALENT_FOREIGN", "info": existing}
     return {"name": name, "state": "EXISTING_CONFLICT_FOREIGN", "info": existing}
 
@@ -144,6 +160,9 @@ def ensure_server(name: str, spec: dict, enabled: bool = True) -> int:
     if cls["state"] == "EXISTING_CONFLICT_FOREIGN":
         sys.stderr.write(f"CONFLICT: MCP server {name} exists with foreign configuration. Not overwriting.\n")
         return 3
+    if cls["state"] == "OWNERSHIP_DRIFT":
+        sys.stderr.write(f"CONFLICT: MCP server {name} was owned, but configuration drifted (modified by user/Google). Not overwriting.\n")
+        return 4
     if cls["state"] == "EXISTING_EQUIVALENT_FOREIGN":
         print(f"Reusing foreign equivalent MCP server {name} (FOREIGN_SHARED)")
         return 0

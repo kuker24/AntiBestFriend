@@ -12,7 +12,8 @@ gbfc_discover_design_bank() {
     "${GROK_DESIGN_BANK:-}" \
     "${CLAUDE_DESIGN_BANK:-}" \
     "$HOME/Downloads/LAB GITHUB/Design" \
-    "$HOME/Design"
+    "$HOME/Design" \
+    "$GBFC_MANAGED/design-bank"
   do
     if gbfc_design_bank_ok "$candidate"; then
       printf '%s\n' "$candidate"
@@ -60,6 +61,15 @@ gbfc_design_bank_download() {
     return 1
   fi
   
+  # Preflight archive validation
+  local unsafe
+  unsafe="$(tar -tzf "$archive" | grep -E '^/|\.\./' | head -n 1 || true)"
+  if [[ -n "$unsafe" ]]; then
+    gbfc_warn "Unsafe archive member detected: $unsafe"
+    rm -rf -- "$stage"
+    return 1
+  fi
+
   # Atomic extraction + validation
   local extract_stage="$stage/extract"
   mkdir -p "$extract_stage"
@@ -77,11 +87,21 @@ gbfc_design_bank_download() {
     fi
   fi
   
+  local target_dest="$dest"
+  if [[ -d "$target_dest" ]]; then
+    if ! gbfc_design_bank_ok "$target_dest"; then
+      gbfc_warn "$target_dest exists but is NOT a valid Design Bank. Refusing to delete foreign data."
+      target_dest="$GBFC_MANAGED/design-bank"
+      gbfc_info "Redirecting Design Bank installation to $target_dest"
+    fi
+  fi
+
   if gbfc_design_bank_ok "$effective_root"; then
-    rm -rf -- "$dest"
-    mv -T -- "$effective_root" "$dest"
+    rm -rf -- "$target_dest"
+    mkdir -p -- "$(dirname -- "$target_dest")"
+    mv -T -- "$effective_root" "$target_dest"
     rm -rf -- "$stage"
-    printf '%s\n' "$dest"
+    printf '%s\n' "$target_dest"
     return 0
   fi
   

@@ -126,7 +126,8 @@ surfaces = {
     "agy_real": home / ".local/bin/agy-real",
     "gemini_md": home / ".gemini/GEMINI.md",
     "mcp_config": home / ".gemini/config/mcp_config.json",
-    "plugin_dir": home / ".gemini/config/plugins/antigravity-bestfriend",
+    "plugin_dir_config": home / ".gemini/config/plugins/antigravity-bestfriend",
+    "plugin_dir_cli": home / ".gemini/antigravity-cli/plugins/antigravity-bestfriend",
     "ownership": home / ".gemini/antigravity-bestfriend/config/mcp-ownership.json",
     "design_bank_cfg": home / ".gemini/antigravity-bestfriend/config/design-bank.json",
 }

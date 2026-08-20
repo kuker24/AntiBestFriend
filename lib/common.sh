@@ -5,7 +5,21 @@ GBFC_ROOT="$(cd -- "$GBFC_LIB_DIR/.." && pwd)"
 GBFC_WORKSPACE="$GBFC_ROOT"
 GBFC_VENDOR_SOURCE="${GBFC_VENDOR_SOURCE:-$GBFC_ROOT}"
 GBFC_MANAGED="${GBFC_MANAGED:-$HOME/.gemini/antigravity-bestfriend}"
-GBFC_PLUGIN_DIR="${GBFC_PLUGIN_DIR:-$HOME/.gemini/config/plugins/antigravity-bestfriend}"
+gbfc_resolve_plugin_dir() {
+  local candidates=(
+    "$HOME/.gemini/config/plugins/antigravity-bestfriend"
+    "$HOME/.gemini/antigravity-cli/plugins/antigravity-bestfriend"
+  )
+  for c in "${candidates[@]}"; do
+    if [[ -d "$c" ]]; then
+      printf '%s\n' "$c"
+      return 0
+    fi
+  done
+  # Fallback to stage mirror if uninstalled
+  printf '%s\n' "$GBFC_MANAGED/stage/antigravity-bestfriend"
+}
+
 GBFC_AGY_CONFIG="${GBFC_AGY_CONFIG:-$HOME/.gemini/config}"
 GBFC_GLOBAL_ROUTER="${GBFC_GLOBAL_ROUTER:-$HOME/.gemini/GEMINI.md}"
 GBFC_MANIFEST="$GBFC_MANAGED/MANIFEST.json"

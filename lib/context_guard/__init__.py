@@ -4,7 +4,4 @@ PRODUCT = "antigravity-bestfriend"
 HOOK_BIN_NAME = "agy-context-guard"
 OWNED_EVENTS = (
     "PreToolUse",
-    "PostToolUse",
-    "PreInvocation",
-    "Stop",
 )

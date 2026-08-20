@@ -17,7 +17,8 @@ gbfc_info "Uninstalling AntiBestFriend..."
 if command -v agy >/dev/null 2>&1; then
   agy plugin uninstall antigravity-bestfriend >/dev/null 2>&1 || true
 fi
-rm -rf -- "$GBFC_PLUGIN_DIR"
+resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
+rm -rf -- "$resolved_plugin_dir"
 
 # 2. Strip only owned router block from ~/.gemini/GEMINI.md
 if [[ -f "$GBFC_GLOBAL_ROUTER" ]]; then
@@ -52,8 +53,13 @@ fi
 
 # 5. Restore original agy binary
 if [[ -f "$HOME/.local/bin/agy-real" ]]; then
-  mv -f "$HOME/.local/bin/agy-real" "$HOME/.local/bin/agy"
-  chmod +x "$HOME/.local/bin/agy"
+  if [[ -f "$HOME/.local/bin/agy" ]] && grep -qF "# ANTIBESTFRIEND-AGY-WRAPPER" "$HOME/.local/bin/agy" 2>/dev/null; then
+    mv -f "$HOME/.local/bin/agy-real" "$HOME/.local/bin/agy"
+    chmod +x "$HOME/.local/bin/agy"
+  else
+    gbfc_info "Current agy is NOT the AntiBestFriend wrapper (likely updated). Preserving current."
+    rm -f -- "$HOME/.local/bin/agy-real"
+  fi
 fi
 
 # 6. Remove helper symlinks in ~/.local/bin

@@ -84,13 +84,17 @@ case "$cmd" in
   skills)
     case "${1:-}" in
       list)
-        ls -1 "$GBFC_PLUGIN_DIR/skills" 2>/dev/null || ls -1 "$GBFC_MANAGED/skills" 2>/dev/null || ls -1 "$ROOT/vendor/skills"
+        local resolved_plugin_dir
+        resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
+        ls -1 "$resolved_plugin_dir/skills" 2>/dev/null || ls -1 "$GBFC_MANAGED/skills" 2>/dev/null || ls -1 "$ROOT/vendor/skills"
         ;;
       verify)
+        local resolved_plugin_dir
+        resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
         python3 "$ROOT/lib/validate_skills.py" \
-          --skills "$GBFC_PLUGIN_DIR/skills" \
-          --allowlist "$GBFC_MANAGED/vendor/skill-allowlist.txt" \
-          --policy "$GBFC_MANAGED/vendor/skill-policy.json"
+          --skills "$resolved_plugin_dir/skills" \
+          --allowlist "${GBFC_MANAGED}/vendor/skill-allowlist.txt" \
+          --policy "${GBFC_MANAGED}/vendor/skill-policy.json"
         ;;
       *) echo "Usage: agy-bestfriend skills list|verify" >&2; exit 2 ;;
     esac

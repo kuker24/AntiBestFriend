@@ -51,6 +51,9 @@ jobs:
       - name: Run Residue & Cleanliness Gate
         run: ./tests/test_residue_gate.sh
 
+      - name: Run Self-Contained Runtime Test
+        run: ./tests/test_self_contained_runtime.sh
+
       - name: Run YOLO Wrapper Tests
         run: ./tests/test_yolo_wrapper.sh
 

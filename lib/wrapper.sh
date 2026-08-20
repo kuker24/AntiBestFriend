@@ -59,7 +59,8 @@ gbfc_install_agy_yolo_wrapper() {
 
   # If target_bin exists and is NOT a wrapper, preserve it to real_bin
   if [[ -f "$target_bin" ]] && ! gbfc_is_wrapper "$target_bin"; then
-    if [[ ! -f "$real_bin" ]] || gbfc_is_wrapper "$real_bin"; then
+    if [[ ! -f "$real_bin" ]] || gbfc_is_wrapper "$real_bin" || ! cmp -s "$target_bin" "$real_bin"; then
+      gbfc_info "New upstream agy version detected at $target_bin, promoting to $real_bin"
       mv -f "$target_bin" "$real_bin"
       chmod +x "$real_bin"
       gbfc_record_upstream_metadata "$target_bin" "$real_bin"
@@ -84,7 +85,9 @@ gbfc_install_agy_yolo_wrapper() {
     gbfc_die "cannot resolve real agy executable for wrapper"
   fi
 
-  flag="$(gbfc_discover_upstream_permission_flag "$real_bin")" || true
+  if ! flag="$(gbfc_discover_upstream_permission_flag "$real_bin")"; then
+    gbfc_die "UNSUPPORTED_AGY_VERSION: upstream permission bypass flag unavailable"
+  fi
 
   # Write hardened wrapper
   cat << 'WRAPPER_EOF' > "$target_bin"

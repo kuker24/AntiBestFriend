@@ -207,7 +207,9 @@ gbfc_run_install() {
   gbfc_tx_set_state PREPARING
   gbfc_check_fault PREPARING
 
-  mkdir -p -- "$GBFC_MANAGED/config" "$GBFC_MANAGED/tx" "$GBFC_MANAGED/bin" "$GBFC_MANAGED/components" "$GBFC_PLUGIN_DIR"
+  local resolved_plugin_dir
+  resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
+  mkdir -p -- "$GBFC_MANAGED/config" "$GBFC_MANAGED/tx" "$GBFC_MANAGED/bin" "$GBFC_MANAGED/components" "$resolved_plugin_dir"
   gbfc_backup_owned
   gbfc_tx_set_state BACKED_UP
   gbfc_check_fault BACKED_UP
