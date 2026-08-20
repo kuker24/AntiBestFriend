@@ -18,6 +18,14 @@ if [[ "${1:-}" == "--version" ]]; then
   exit 0
 fi
 if [[ "${1:-}" == "plugin" ]]; then
+  if [[ "${2:-}" == "install" ]]; then
+    mkdir -p "$HOME/.gemini/config/plugins/antigravity-bestfriend"
+    cp -a -- "$3/"* "$HOME/.gemini/config/plugins/antigravity-bestfriend/"
+  elif [[ "${2:-}" == "list" ]]; then
+    echo "antigravity-bestfriend"
+  elif [[ "${2:-}" == "uninstall" ]]; then
+    rm -rf "$HOME/.gemini/config/plugins/antigravity-bestfriend"
+  fi
   exit 0
 fi
 echo "MOCK AGY RUN: $@"
