@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "capturedAt": "2026-08-19",
+  "sourceSnapshot": {
+    "product": "GrokBestFriend",
+    "version": "1.3.1",
+    "commit": "0770fc0b73867bfde618bc06c482711f364e938d",
+    "host": "linux-x86_64",
+    "grokVersionSeen": "1.0.4",
+    "pluginsInstalled": [],
+    "marketplace": [
+      {
+        "name": "xAI Official",
+        "git": "https://github.com/xai-org/plugin-marketplace.git"
+      }
+    ],
+    "skills": [
+      "adhd",
+      "ask-matt",
+      "browser-act",
+      "chrome-devtools-axi",
+      "emil-design-eng",
+      "found-this-design",
+      "full-audit-keamanan",
+      "full-performance-audit",
+      "gh-axi",
+      "grill-with-docs",
+      "impeccable",
+      "matt-code-review",
+      "matt-implement",
+      "scroll-world",
+      "tdd",
+      "to-spec",
+      "to-tickets",
+      "visual-studio"
+    ],
+    "rules": [
+      "00-routing.md",
+      "01-verification.md"
+    ]
+  },
+  "product": {
+    "name": "ClaudeBestFriend",
+    "version": "1.4.0-claude.1",
+    "skills": [
+      "adhd",
+      "architect",
+      "arena",
+      "ask-matt",
+      "blast-radius",
+      "browser-act",
+      "chrome-devtools-axi",
+      "codebase-design",
+      "create-verification-skill",
+      "decision-log",
+      "diagnosing-bugs",
+      "domain-modeling",
+      "emil-design-eng",
+      "figure-it-out",
+      "found-this-design",
+      "full-audit-keamanan",
+      "full-performance-audit",
+      "gh-axi",
+      "grill-with-docs",
+      "grilling",
+      "impeccable",
+      "improve-codebase-architecture",
+      "interrogate",
+      "maintain-verification-skill",
+      "matt-code-review",
+      "matt-implement",
+      "prototype",
+      "reflect",
+      "research",
+      "scroll-world",
+      "tdd",
+      "technical-writing",
+      "to-spec",
+      "to-tickets",
+      "unslop",
+      "visual-studio",
+      "wait-what",
+      "why",
+      "wizard",
+      "writing-for-agents"
+    ],
+    "rules": [
+      "00-routing.md",
+      "01-verification.md",
+      "02-engineering-principles.md",
+      "03-prose-discipline.md",
+      "arena-protocol.md",
+      "decision-log-protocol.md"
+    ],
+    "note": "Skill list is a snapshot of vendor/skill-allowlist.txt at this version. Installer counts from the allowlist, not this array."
+  },
+  "hooks": [
+    "impeccable.json"
+  ],
+  "mcp": {
+    "codebase-memory-mcp": {"enabled": true, "transport": "stdio"},
+    "context7": {"enabled": true, "transport": "http", "url": "https://mcp.context7.com/mcp"},
+    "shadcn": {"enabled": true, "transport": "stdio", "package": "shadcn@4.18.0"},
+    "exa": {"enabled": false, "transport": "http", "url": "https://mcp.exa.ai/mcp", "status": "SETUP_REQUIRED"},
+    "serena": {"enabled": false, "transport": "stdio", "context": "agent"}
+  },
+  "tools": {
+    "serena-agent": "1.6.1",
+    "browser-act-cli": "1.3.0",
+    "semgrep": "1.171.0",
+    "osv-scanner": "2.4.0",
+    "gitleaks": "8.30.1",
+    "gh": "required",
+    "node": ">=20.18.1",
+    "chromium": "required-not-chrome"
+  },
+  "compat": {
+    "claude": true,
+    "cursor": false
+  },
+  "excludedFromRepo": [
+    "auth.json",
+    "sessions",
+    "marketplace-cache",
+    "trusted_folders.toml",
+    "design-bank archive (GitHub Release v1.0.0, not in git)",
+    "Open Design packs (user-supplied local ZIPs, not in git or Releases)",
+    "claude runtime",
+    "full Matt Pocock plugin",
+    "full Pstack plugin"
+  ]
+}

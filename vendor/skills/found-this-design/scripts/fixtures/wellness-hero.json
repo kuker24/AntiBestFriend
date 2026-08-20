@@ -1,0 +1,14 @@
+{
+  "intent": "section",
+  "mode": "Persuade",
+  "surface": "hero",
+  "industry": "wellness",
+  "theme": "light",
+  "kinds": ["soft-gradients", "minimal"],
+  "query": "wellness healing mind body health hero landing",
+  "hexes": ["#f7f3ea", "#4a7c59"],
+  "productName": "Stillmind",
+  "count": 3,
+  "laneHint": "section",
+  "avoid": []
+}

@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+
+gbfc_write_manifest() {
+  local tmp
+  if [[ "$GBFC_DRY_RUN" == 1 ]]; then
+    gbfc_info "WOULD_WRITE $GBFC_MANIFEST"
+    return 0
+  fi
+  mkdir -p -- "$GBFC_MANAGED/config"
+  tmp="$(mktemp "$GBFC_MANAGED/.manifest.XXXXXX")"
+  python3 - "$tmp" "$GBFC_ROOT" "$GBFC_VENDOR_SOURCE" "$GBFC_MANAGED" "$GBFC_CBM_BIN" \
+    "$(gbfc_product_version)" "$(gbfc_source_commit)" "$(gbfc_now)" \
+    "${GBFC_DESIGN_BANK_CFG:-}" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+
+target, root, vendor_src, managed, cbm, version, commit, now, bank_cfg = sys.argv[1:10]
+
+def sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "0"*64
+
+allow = Path(vendor_src, "vendor/skill-allowlist.txt")
+skills = [line.strip() for line in allow.read_text(encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")]
+hashes = {}
+for rel in (
+    "vendor/skill-allowlist.txt",
+    "vendor/skill-policy.json",
+    "vendor/rule-allowlist.txt",
+    "vendor/mcp-policy.json",
+    "vendor/sources.json",
+    "vendor/inventory.json",
+):
+    src = Path(vendor_src, rel)
+    if not src.is_file():
+        src = Path(root, rel)
+    hashes[rel] = sha(src)
+
+cbm_source = "unknown"
+src_file = Path(managed, "config/cbm-source.txt")
+if src_file.is_file():
+    cbm_source = src_file.read_text(encoding="utf-8").strip()
+
+design = {}
+if bank_cfg and Path(bank_cfg).is_file():
+    design = json.loads(Path(bank_cfg).read_text(encoding="utf-8"))
+
+ownership = {}
+own_path = Path(managed, "config/mcp-ownership.json")
+if own_path.is_file():
+    ownership = json.loads(own_path.read_text(encoding="utf-8"))
+
+payload = {
+    "product": "antigravity-bestfriend",
+    "productVersion": version,
+    "installed_at": now,
+    "source": {
+        "repo": "https://github.com/kuker24/ClaudeBestFriend",
+        "commit": commit,
+        "branch": "main",
+        "path": root,
+    },
+    "testedWithAgy": "1.1.17",
+    "hashes": hashes,
+    "skills": [f"{Path.home()}/.gemini/config/plugins/antigravity-bestfriend/skills/{name}" for name in skills],
+    "mcpOwnership": ownership,
+    "designBank": design,
+    "codebaseMemory": {
+        "path": cbm,
+        "artifactSource": cbm_source,
+        "version": "0.9.0",
+    },
+    "adapterRoot": root,
+    "managedRoot": managed,
+    "contextGuard": {
+        "runtime": str(Path(managed, "bin/agy-context-guard")),
+        "config": str(Path(managed, "config/context-guard.json")),
+    },
+}
+Path(target).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+  chmod 600 "$tmp"
+  mv -f -- "$tmp" "$GBFC_MANIFEST"
+}
+
+gbfc_ensure_mcp() {
+  local name state
+  if [[ "$GBFC_DRY_RUN" == 1 ]]; then
+    gbfc_info "WOULD_MCP ensure codebase-memory-mcp context7 shadcn serena; exa absent"
+    return 0
+  fi
+  python3 "$GBFC_ROOT/lib/mcp.py" classify-all --policy "$GBFC_ROOT/vendor/mcp-policy.json" \
+    >"$GBFC_MANAGED/config/mcp-classify.json"
+
+  for name in codebase-memory-mcp context7 shadcn; do
+    gbfc_info "Configuring MCP $name..."
+    python3 "$GBFC_ROOT/lib/mcp.py" add --name "$name" --policy "$GBFC_ROOT/vendor/mcp-policy.json" \
+      || gbfc_die "failed to add MCP $name"
+  done
+
+  # Serena configured disabled by default (on-demand)
+  python3 "$GBFC_ROOT/lib/mcp.py" add --name "serena" --policy "$GBFC_ROOT/vendor/mcp-policy.json" \
+    || gbfc_die "failed to configure serena MCP"
+}
+
+gbfc_install_context_guard() {
+  if [[ "$GBFC_DRY_RUN" == 1 ]]; then
+    gbfc_info "WOULD_CONTEXT_GUARD $GBFC_MANAGED/lib/context_guard"
+    return 0
+  fi
+  mkdir -p -- "$GBFC_MANAGED/lib" "$GBFC_MANAGED/bin" "$GBFC_MANAGED/config" "$GBFC_MANAGED/context-cache"
+  chmod 700 -- "$GBFC_MANAGED/context-cache"
+  rm -rf -- "$GBFC_MANAGED/lib/context_guard"
+  cp -a -- "$GBFC_ROOT/lib/context_guard" "$GBFC_MANAGED/lib/context_guard"
+  find "$GBFC_MANAGED/lib/context_guard" -type d -name __pycache__ -prune -exec rm -rf -- {} +
+  find "$GBFC_MANAGED/lib/context_guard" -type f -name '*.pyc' -delete
+  install -m 755 "$GBFC_ROOT/bin/agy-context-guard" "$GBFC_CONTEXT_GUARD"
+
+  if [[ ! -f "$GBFC_CONTEXT_GUARD_CFG" ]]; then
+    cp -a -- "$GBFC_ROOT/templates/context-guard.example.json" "$GBFC_CONTEXT_GUARD_CFG"
+    chmod 600 -- "$GBFC_CONTEXT_GUARD_CFG"
+  fi
+
+  PYTHONPATH="$GBFC_MANAGED/lib${PYTHONPATH:+:$PYTHONPATH}" GBFC_MANAGED="$GBFC_MANAGED" \
+    "$GBFC_CONTEXT_GUARD" self-test >/dev/null \
+    || gbfc_die "context-guard self-test failed"
+  gbfc_info "CONTEXT_GUARD_READY"
+}
+
+gbfc_install_design_intelligence() {
+  if [[ "$GBFC_DRY_RUN" == 1 ]]; then
+    gbfc_info "WOULD_INSTALL_DESIGN_INTELLIGENCE"
+    return 0
+  fi
+  mkdir -p -- "$GBFC_MANAGED/lib"
+  rm -rf -- "$GBFC_MANAGED/lib/design_intelligence"
+  cp -a -- "$GBFC_ROOT/lib/design_intelligence" "$GBFC_MANAGED/lib/design_intelligence"
+  find "$GBFC_MANAGED/lib/design_intelligence" -type d -name __pycache__ -prune -exec rm -rf -- {} +
+  find "$GBFC_MANAGED/lib/design_intelligence" -type f -name '*.pyc' -delete
+}
+
+gbfc_run_install() {
+  [[ -d "$GBFC_VENDOR_SOURCE/vendor/skills" ]] || gbfc_die "vendor skills missing: $GBFC_VENDOR_SOURCE/vendor/skills"
+  [[ -f "$GBFC_VENDOR_SOURCE/vendor/skill-allowlist.txt" ]] || gbfc_die "missing skill-allowlist"
+  gbfc_have python3 || gbfc_die "python3 required"
+  gbfc_have agy || gbfc_die "agy CLI required"
+  gbfc_have node || gbfc_die "node required for shadcn pin"
+  gbfc_have npx || gbfc_die "npx required for shadcn pin"
+
+  gbfc_lock_begin
+  gbfc_tx_check_stale
+  gbfc_tx_set_state PREPARING
+  mkdir -p -- "$GBFC_MANAGED/config" "$GBFC_MANAGED/tx" "$GBFC_MANAGED/bin" "$GBFC_MANAGED/components" "$GBFC_PLUGIN_DIR"
+  gbfc_backup_owned
+  gbfc_tx_set_state BACKED_UP
+
+  gbfc_install_codebase_memory
+  printf '%s\n' "$GBFC_ROOT" >"$GBFC_MANAGED/config/adapter-root.txt"
+  gbfc_install_helper_bins
+  gbfc_install_design_intelligence
+
+  gbfc_stage_skills
+  gbfc_tx_set_state SKILLS_CONFIGURED
+  gbfc_swap_skills
+  gbfc_install_router
+  gbfc_tx_set_state RULES_CONFIGURED
+  gbfc_install_design_bank
+  gbfc_tx_set_state DESIGN_CONFIGURED
+  gbfc_ensure_mcp
+  gbfc_tx_set_state MCP_CONFIGURED
+  gbfc_install_context_guard
+  gbfc_tx_set_state HOOKS_CONFIGURED
+  gbfc_write_manifest
+  gbfc_tx_set_state VERIFIED
+
+  if [[ "$GBFC_DRY_RUN" == 1 ]]; then
+    gbfc_info "dry-run complete"
+    gbfc_lock_end
+    return 0
+  fi
+
+  if ! gbfc_doctor; then
+    gbfc_warn "doctor reported FAIL during install; leaving txn for recover"
+    gbfc_lock_end
+    return 1
+  fi
+
+  gbfc_tx_set_state COMMITTED
+  gbfc_tx_clear
+  gbfc_lock_end
+  gbfc_info "Installation COMMITTED successfully."
+}

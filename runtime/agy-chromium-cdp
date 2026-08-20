@@ -1,0 +1,234 @@
+#!/usr/bin/env bash
+# Background Chromium CDP for AntigravityBestFriend. Never launches Google Chrome.
+set -euo pipefail
+
+CDP_HOST="127.0.0.1"
+CDP_PORT="${ANTIGRAVITY_CHROMIUM_CDP_PORT:-9223}"
+MANAGED="${GBFC_MANAGED:-$HOME/.gemini/antigravity-bestfriend}"
+STATE_DIR="${ANTIGRAVITY_CHROMIUM_STATE:-$MANAGED/chromium-profile}"
+PID_FILE="$STATE_DIR/cdp.pid"
+LOG_FILE="$STATE_DIR/cdp.log"
+
+profile_dir_for() {
+  local bin="$1"
+  if [[ -n "${ANTIGRAVITY_CHROMIUM_PROFILE:-}" ]]; then
+    printf '%s\n' "$ANTIGRAVITY_CHROMIUM_PROFILE"
+    return 0
+  fi
+  case "$bin" in
+    /snap/bin/chromium|*'/snap/chromium'*)
+      printf '%s\n' "$HOME/snap/chromium/common/agy-cdp"
+      ;;
+    *)
+      printf '%s\n' "$STATE_DIR"
+      ;;
+  esac
+}
+
+usage() {
+  cat <<'USAGE_EOF'
+Usage: agy-chromium-cdp start|status|stop|resolve
+
+start    Launch isolated headless Chromium on 127.0.0.1:9223 (idempotent)
+status   Print CDP health and the listening binary
+stop     Stop only the Chromium this helper started
+resolve  Print the Chromium executable, or NOT_CONFIGURED
+USAGE_EOF
+}
+
+is_google_chrome() {
+  local path="$1"
+  case "$path" in
+    *google-chrome*|*'/opt/google/chrome'*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+is_chromium_path() {
+  local path="$1"
+  is_google_chrome "$path" && return 1
+  case "$path" in
+    *chromium*|*chromium-browser*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+resolve_chromium() {
+  local candidate
+  for candidate in     "${ANTIGRAVITY_CHROMIUM_BIN:-}"     /snap/bin/chromium     /usr/bin/chromium     /usr/bin/chromium-browser     /usr/lib/chromium/chromium     /usr/lib/chromium-browser/chromium-browser
+  do
+    [[ -n "$candidate" && -x "$candidate" ]] || continue
+    if is_chromium_path "$candidate"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  if command -v chromium >/dev/null 2>&1; then
+    candidate="$(command -v chromium)"
+    if is_chromium_path "$candidate"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+  if command -v chromium-browser >/dev/null 2>&1; then
+    candidate="$(command -v chromium-browser)"
+    if is_chromium_path "$candidate"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+  printf 'NOT_CONFIGURED: no Chromium binary (refusing Google Chrome)\n' >&2
+  return 2
+}
+
+listener_pid() {
+  local pid
+  pid="$(ss -lptn "sport = :$CDP_PORT" 2>/dev/null | awk 'NR>1 {
+    if (match($0, /pid=[0-9]+/)) {
+      print substr($0, RSTART+4, RLENGTH-4)
+      exit
+    }
+  }')"
+  [[ -n "$pid" ]] && printf '%s\n' "$pid"
+}
+
+proc_cmd() {
+  local pid="$1"
+  if [[ -r "/proc/$pid/cmdline" ]]; then
+    tr '\0' ' ' <"/proc/$pid/cmdline"
+    return 0
+  fi
+  return 1
+}
+
+cmd_is_ours() {
+  local cmd="$1"
+  is_google_chrome "$cmd" && return 1
+  is_chromium_path "$cmd" || return 1
+  [[ "$cmd" == *"--remote-debugging-port=$CDP_PORT"* ]]
+}
+
+cdp_ok() {
+  curl -fsS --max-time 2 "http://$CDP_HOST:$CDP_PORT/json/version" >/dev/null
+}
+
+our_cdp_ok() {
+  local pid cmd
+  pid="$(listener_pid || true)"
+  [[ -n "$pid" ]] || return 1
+  cmd="$(proc_cmd "$pid" || true)"
+  [[ -n "$cmd" ]] || return 1
+  cmd_is_ours "$cmd" || return 1
+  cdp_ok
+}
+
+cmd_resolve() {
+  resolve_chromium
+}
+
+cmd_status() {
+  local bin pid cmd
+  if bin="$(resolve_chromium)"; then
+    printf 'binary=%s\n' "$bin"
+  else
+    return 2
+  fi
+  pid="$(listener_pid || true)"
+  if [[ -z "$pid" ]]; then
+    printf 'state=stopped port=%s\n' "$CDP_PORT"
+    return 0
+  fi
+  cmd="$(proc_cmd "$pid" || true)"
+  printf 'pid=%s port=%s\n' "$pid" "$CDP_PORT"
+  printf 'cmd=%s\n' "$cmd"
+  if is_google_chrome "$cmd"; then
+    printf 'state=WRONG_ENGINE google-chrome is listening on %s\n' "$CDP_PORT" >&2
+    return 1
+  fi
+  if cmd_is_ours "$cmd" && cdp_ok; then
+    printf 'state=ready url=http://%s:%s\n' "$CDP_HOST" "$CDP_PORT"
+    return 0
+  fi
+  printf 'state=occupied port=%s is not this helper\n' "$CDP_PORT" >&2
+  return 1
+}
+
+cmd_start() {
+  local bin pid profile
+  if our_cdp_ok; then
+    printf 'already running url=http://%s:%s\n' "$CDP_HOST" "$CDP_PORT"
+    return 0
+  fi
+  pid="$(listener_pid || true)"
+  if [[ -n "$pid" ]]; then
+    printf 'NOT_CONFIGURED: port %s is already in use by pid %s\n' "$CDP_PORT" "$pid" >&2
+    return 1
+  fi
+  bin="$(resolve_chromium)" || return 2
+  profile="$(profile_dir_for "$bin")"
+  mkdir -p -- "$STATE_DIR" "$profile"
+  nohup "$bin" \
+    --headless=new \
+    --remote-debugging-address="$CDP_HOST" \
+    --remote-debugging-port="$CDP_PORT" \
+    --user-data-dir="$profile" \
+    --no-first-run \
+    --no-default-browser-check \
+    --disable-sync \
+    --disable-gpu \
+    --disable-dev-shm-usage \
+    --password-store=basic \
+    --use-mock-keychain \
+    about:blank \
+    >"$LOG_FILE" 2>&1 &
+  printf '%s\n' "$!" >"$PID_FILE"
+  local i
+  for i in $(seq 1 60); do
+    if our_cdp_ok; then
+      printf 'started url=http://%s:%s binary=%s profile=%s\n' "$CDP_HOST" "$CDP_PORT" "$bin" "$profile"
+      return 0
+    fi
+    sleep 0.2
+  done
+  printf 'NOT_CONFIGURED: Chromium CDP did not become ready on %s:%s\n' "$CDP_HOST" "$CDP_PORT" >&2
+  if [[ -f "$LOG_FILE" ]]; then
+    tail -n 20 "$LOG_FILE" >&2 || true
+  fi
+  return 1
+}
+
+cmd_stop() {
+  local pid cmd
+  if [[ -f "$PID_FILE" ]]; then
+    pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [[ -n "$pid" && -d "/proc/$pid" ]]; then
+      cmd="$(proc_cmd "$pid" || true)"
+      if cmd_is_ours "$cmd"; then
+        kill "$pid" 2>/dev/null || true
+        sleep 0.2
+        if [[ -d "/proc/$pid" ]]; then
+          kill -9 "$pid" 2>/dev/null || true
+        fi
+      fi
+    fi
+    rm -f -- "$PID_FILE"
+  fi
+  pid="$(listener_pid || true)"
+  if [[ -n "$pid" ]]; then
+    cmd="$(proc_cmd "$pid" || true)"
+    if cmd_is_ours "$cmd"; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  fi
+  printf 'stopped\n'
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  start) cmd_start ;;
+  status) cmd_status ;;
+  stop) cmd_stop ;;
+  resolve) cmd_resolve ;;
+  -h|--help|help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac

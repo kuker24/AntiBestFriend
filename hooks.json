@@ -1,0 +1,43 @@
+{
+  "context-guard": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/bin/agy-context-guard",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/bin/agy-context-guard",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/bin/agy-context-guard",
+        "timeout": 15
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/bin/agy-context-guard",
+        "timeout": 15
+      }
+    ]
+  }
+}

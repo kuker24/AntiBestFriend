@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "kinds": {
+    "system": {
+      "family": "systems",
+      "search_policy": "metadata-only",
+      "selection_policy": "full-on-selection",
+      "primary_files": ["manifest.json", "DESIGN.md", "tokens.css"]
+    },
+    "structure": {
+      "family": "templates",
+      "search_policy": "metadata-only",
+      "selection_policy": "normalized-card-only",
+      "primary_files": ["SKILL.md"]
+    },
+    "recipe": {
+      "family": "plugins",
+      "search_policy": "metadata-only",
+      "selection_policy": "metadata-only",
+      "primary_files": ["open-design.json"]
+    },
+    "specialist": {
+      "family": "skills",
+      "search_policy": "metadata-only",
+      "selection_policy": "never",
+      "primary_files": ["SKILL.md"]
+    },
+    "visual": {
+      "family": "visual",
+      "search_policy": "metadata-only",
+      "selection_policy": "never",
+      "primary_files": []
+    }
+  },
+  "archive_families": {
+    "design-systems": "systems",
+    "design-templates": "templates",
+    "plugins": "plugins",
+    "skills": "skills"
+  },
+  "lineage": {
+    "official_design_systems_prefix": "plugins/_official/design-systems/",
+    "official_examples_prefix": "plugins/_official/examples/",
+    "community_prefix": "plugins/community/"
+  },
+  "authority": {
+    "refine": [
+      "explicit_scope",
+      "product_truth",
+      "incumbent_design",
+      "pinned_compatible_reference",
+      "bank",
+      "heuristics"
+    ],
+    "redesign": [
+      "explicit_scope",
+      "product_truth",
+      "pinned_new_direction",
+      "reference_evidence",
+      "bank",
+      "heuristics"
+    ],
+    "greenfield": [
+      "explicit_brief",
+      "product_truth",
+      "selected_direction",
+      "trusted_evidence",
+      "system_bank",
+      "structure_bank",
+      "heuristics"
+    ]
+  }
+}

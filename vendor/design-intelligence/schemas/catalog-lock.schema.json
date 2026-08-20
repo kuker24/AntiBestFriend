@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grokbestfriend.local/schemas/catalog-lock.schema.json",
+  "title": "Design Intelligence catalog lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generation_id",
+    "schema_version",
+    "input_hashes",
+    "sqlite_filename",
+    "sqlite_sha256",
+    "jsonl_filename",
+    "jsonl_sha256",
+    "created_at"
+  ],
+  "properties": {
+    "generation_id": {"type": "string"},
+    "schema_version": {"type": "integer", "const": 1},
+    "input_hashes": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "sqlite_filename": {"type": "string", "pattern": "^catalog-[0-9a-f]+\\.sqlite3$"},
+    "sqlite_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "jsonl_filename": {"type": "string", "pattern": "^catalog-[0-9a-f]+\\.jsonl$"},
+    "jsonl_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "created_at": {"type": "string"}
+  }
+}

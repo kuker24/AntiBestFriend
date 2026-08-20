@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "codebase-memory-mcp": {
+      "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/components/codebase-memory/bin/codebase-memory-mcp",
+      "args": []
+    },
+    "context7": {
+      "serverUrl": "https://mcp.context7.com/mcp"
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "shadcn@4.18.0",
+        "mcp"
+      ]
+    },
+    "serena": {
+      "command": "serena",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        "agent",
+        "--project-from-cwd",
+        "--open-web-dashboard",
+        "false"
+      ],
+      "disabled": true
+    }
+  }
+}

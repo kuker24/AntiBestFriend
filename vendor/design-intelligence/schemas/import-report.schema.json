@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grokbestfriend.local/schemas/import-report.schema.json",
+  "title": "Design Intelligence import report",
+  "type": "object",
+  "required": ["schema_version", "status", "archives", "counts", "warnings"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "status": {"enum": ["ok", "degraded", "blocked"]},
+    "generation_id": {"type": ["string", "null"]},
+    "archives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["logical_name", "sha256", "family", "blocked", "issues"],
+        "properties": {
+          "logical_name": {"type": "string"},
+          "sha256": {"type": "string"},
+          "family": {"type": ["string", "null"]},
+          "blocked": {"type": "boolean"},
+          "members": {"type": "integer"},
+          "issues": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "counts": {"type": "object"},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}

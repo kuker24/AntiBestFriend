@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "servers": {
+    "codebase-memory-mcp": {
+      "enabled": true,
+      "transport": "stdio",
+      "commandKind": "owned-binary",
+      "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/components/codebase-memory/bin/codebase-memory-mcp",
+      "args": []
+    },
+    "context7": {
+      "enabled": true,
+      "transport": "http",
+      "serverUrl": "https://mcp.context7.com/mcp"
+    },
+    "shadcn": {
+      "enabled": true,
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "shadcn@4.18.0",
+        "mcp"
+      ]
+    },
+    "serena": {
+      "enabled": false,
+      "transport": "stdio",
+      "command": "serena",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        "agent",
+        "--project-from-cwd",
+        "--open-web-dashboard",
+        "false"
+      ]
+    },
+    "exa": {
+      "enabled": false,
+      "transport": "http",
+      "serverUrl": "https://mcp.exa.ai/mcp"
+    }
+  }
+}

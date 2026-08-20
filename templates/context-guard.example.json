@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "maxLongEdgePx": 1200,
+  "maxImageBytes": 393216,
+  "stepDownPx": [1200, 1024, 900, 768],
+  "maxSourcePixels": 40000000,
+  "batchSoftTokens": 60000,
+  "batchHardTokens": 90000,
+  "turnSoftTokens": 100000,
+  "turnHardTokens": 140000,
+  "textBudgetBash": 20000,
+  "textBudgetRead": 30000,
+  "cacheGlobalMiB": 256,
+  "cacheStreamMiB": 64,
+  "cacheRetentionDays": 7,
+  "maxStdinBytes": 12000000,
+  "oneImagePerBatch": true,
+  "jpegQuality": [85, 75, 65, 55]
+}

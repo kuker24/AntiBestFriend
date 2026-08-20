@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grokbestfriend.local/schemas/catalog-item.schema.json",
+  "title": "Design Intelligence catalog item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "name",
+    "description",
+    "source",
+    "license",
+    "trust",
+    "evidence_tier",
+    "execution_class",
+    "style_authority",
+    "intent",
+    "modes",
+    "surfaces",
+    "platforms",
+    "categories",
+    "tags",
+    "capabilities_required",
+    "provider",
+    "search_policy",
+    "selection_policy",
+    "canonical_id",
+    "alias_of",
+    "duplicate_of",
+    "dedup_reason",
+    "untrusted_text",
+    "normalization_status",
+    "extraction_evidence",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "id": {"type": "string", "minLength": 3},
+    "kind": {"enum": ["system", "structure", "recipe", "specialist", "visual"]},
+    "name": {"type": "string"},
+    "description": {"type": "string"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["archive", "path", "url", "version", "content_sha256"],
+      "properties": {
+        "archive": {"type": "string"},
+        "path": {"type": "string"},
+        "url": {"type": ["string", "null"]},
+        "version": {"type": ["string", "null"]},
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spdx", "status", "redistribution"],
+      "properties": {
+        "spdx": {"type": ["string", "null"]},
+        "status": {"enum": ["known", "declared-only", "unknown", "conflicting"]},
+        "redistribution": {"enum": ["allowed", "local-only", "blocked", "unknown"]}
+      }
+    },
+    "trust": {"enum": ["first-party", "upstream", "curated", "community", "unknown"]},
+    "evidence_tier": {"enum": ["E0", "E1", "E2", "E3"]},
+    "execution_class": {
+      "enum": [
+        "stub",
+        "reference-only",
+        "connector-required",
+        "provider-required",
+        "quarantined",
+        "native-candidate",
+        "adapted-candidate"
+      ]
+    },
+    "style_authority": {"enum": ["authoritative", "inspiration-only", "structure-only", "none"]},
+    "intent": {"type": "array", "items": {"type": "string"}},
+    "modes": {"type": "array", "items": {"type": "string"}},
+    "surfaces": {"type": "array", "items": {"type": "string"}},
+    "platforms": {"type": "array", "items": {"type": "string"}},
+    "categories": {"type": "array", "items": {"type": "string"}},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "capabilities_required": {"type": "array", "items": {"type": "string"}},
+    "provider": {"type": ["string", "null"]},
+    "search_policy": {"enum": ["metadata-only", "never"]},
+    "selection_policy": {
+      "enum": ["full-on-selection", "normalized-card-only", "metadata-only", "never"]
+    },
+    "canonical_id": {"type": "string"},
+    "alias_of": {"type": ["string", "null"]},
+    "duplicate_of": {"type": ["string", "null"]},
+    "dedup_reason": {
+      "type": ["string", "null"],
+      "enum": ["path-lineage", "content-hash", "normalized-id", null]
+    },
+    "untrusted_text": {"type": "boolean"},
+    "normalization_status": {"enum": ["complete", "partial", "manual-required"]},
+    "extraction_evidence": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "summary": {"type": "object"},
+    "search_text": {"type": "string"}
+  }
+}

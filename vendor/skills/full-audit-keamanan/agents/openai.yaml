@@ -1,0 +1,18 @@
+name: full-audit-keamanan
+description: Perform broad defensive security audits across code, config, auth, supply chain, and AI integrations.
+version: 1.0.0
+triggers:
+  - "audit keamanan aplikasi"
+  - "security audit repo"
+  - "review secrets exposure"
+  - "supply chain security check"
+  - "auth security review"
+  - "llm integration security audit"
+keywords:
+  - security
+  - audit
+  - secrets
+  - auth
+  - supply-chain
+  - defensive
+  - llm-security

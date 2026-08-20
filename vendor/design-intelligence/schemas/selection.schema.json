@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grokbestfriend.local/schemas/design-intelligence-selection.schema.json",
+  "title": "User-locked Design Intelligence selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "catalog_generation",
+    "target",
+    "intent",
+    "mode",
+    "query",
+    "systems",
+    "structure",
+    "authority",
+    "constraints",
+    "not_design_md",
+    "untrusted_text"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "catalog_generation": {"type": "string", "pattern": "^[0-9a-f]{16,64}$"},
+    "target": {"type": "string", "minLength": 1, "maxLength": 240},
+    "intent": {"enum": ["refine", "redesign", "greenfield"]},
+    "mode": {"enum": ["Persuade", "Operate", "Read", "Experience"]},
+    "query": {"type": "string", "minLength": 1, "maxLength": 600},
+    "systems": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "id", "name", "source_content_sha256", "style_authority", "evidence_tier", "license", "package_files_loaded"],
+        "properties": {
+          "role": {"enum": ["primary", "secondary"]},
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "source_content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "style_authority": {"enum": ["authoritative", "inspiration-only"]},
+          "evidence_tier": {"enum": ["E0", "E1", "E2", "E3"]},
+          "license": {"type": "object"},
+          "package_files_loaded": {"type": "integer", "maximum": 3}
+        }
+      }
+    },
+    "structure": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["id", "name", "source_content_sha256", "style_authority", "package_files_loaded"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "source_content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "style_authority": {"const": "structure-only"},
+        "package_files_loaded": {"const": 0}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "bank_role", "product_truth_wins"],
+      "properties": {
+        "source": {"const": "user-locked-direction"},
+        "bank_role": {"const": "challenger-evidence"},
+        "product_truth_wins": {"const": true}
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_primary_systems", "max_secondary_influences", "structure_cannot_override_style", "no_literal_brand_copy", "no_specialist_activation"],
+      "properties": {
+        "max_primary_systems": {"const": 1},
+        "max_secondary_influences": {"const": 1},
+        "structure_cannot_override_style": {"const": true},
+        "no_literal_brand_copy": {"const": true},
+        "no_specialist_activation": {"const": true}
+      }
+    },
+    "not_design_md": {"const": true},
+    "untrusted_text": {"const": true}
+  }
+}

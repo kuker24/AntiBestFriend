@@ -1,0 +1,14 @@
+{
+  "intent": "redesign",
+  "mode": "Operate",
+  "surface": "dashboard",
+  "industry": "saas",
+  "theme": "dark",
+  "kinds": ["dark-mode", "minimal"],
+  "query": "saas dashboard dark precision productivity linear",
+  "hexes": ["#08090a", "#5e6ad2"],
+  "productName": "Questly",
+  "count": 3,
+  "laneHint": "identity",
+  "avoid": []
+}

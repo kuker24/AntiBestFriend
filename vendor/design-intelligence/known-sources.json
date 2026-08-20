@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "snapshots": [
+    {
+      "id": "od-packs-2026-07-20",
+      "note": "Session packs also named design-systems(1).zip and siblings. Filename alias only.",
+      "archives": {
+        "design-systems.zip": "d1b91590ec9d74e4cf520000cd465a87ed86cc57c8a4c7d9bc13810f20712bd7",
+        "design-templates.zip": "ff3ba515f95f8bda56cbc2d6702f1f667db9deed3531ddace06bc2b657090708",
+        "plugins.zip": "0f1cc95d4196c22015dedf40d00d7f03907565851504d3c6826be13469759bb6",
+        "skills.zip": "b5c6bb68b05a18b6dd59fab0212b9ecb8b64f76a28174a7d629fae21e4dc8023"
+      },
+      "expected_counts": {
+        "items": 906,
+        "systems": 151,
+        "structures": 114,
+        "recipes": 479,
+        "specialists": 162,
+        "aliases": 256,
+        "stubs": 85,
+        "quarantined": 7
+      }
+    }
+  ]
+}

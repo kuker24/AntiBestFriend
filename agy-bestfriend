@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+
+resolve_root() {
+  local src="${BASH_SOURCE[0]}"
+  while [[ -L "$src" ]]; do
+    local dir
+    dir="$(cd -- "$(dirname -- "$src")" && pwd)"
+    src="$(readlink -- "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd -- "$(dirname -- "$src")/.." && pwd
+}
+
+ROOT="$(resolve_root)"
+if [[ ! -f "$ROOT/lib/common.sh" ]]; then
+  if [[ -f "$HOME/.gemini/antigravity-bestfriend/config/adapter-root.txt" ]]; then
+    ROOT="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <"$HOME/.gemini/antigravity-bestfriend/config/adapter-root.txt" | head -n 1)"
+  fi
+fi
+if [[ ! -f "$ROOT/lib/common.sh" ]]; then
+  printf 'ERROR: cannot resolve AntigravityBestFriend root\n' >&2
+  exit 1
+fi
+
+# shellcheck source=/dev/null
+source "$ROOT/lib/common.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/transaction.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/design-bank.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/tools.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/skills.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/doctor.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/restore.sh"
+
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+  doctor)
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --repair) GBFC_REPAIR=1 ;;
+        --strict) GBFC_DOCTOR_STRICT=1 ;;
+        *) gbfc_die "unknown doctor flag $1" ;;
+      esac
+      shift
+    done
+    gbfc_doctor
+    ;;
+  install)
+    exec "$ROOT/install.sh" "$@"
+    ;;
+  uninstall)
+    exec "$ROOT/uninstall.sh" "$@"
+    ;;
+  restore)
+    exec "$ROOT/restore.sh" "$@"
+    ;;
+  skills)
+    case "${1:-}" in
+      list)
+        ls -1 "$GBFC_PLUGIN_DIR/skills" 2>/dev/null || ls -1 "$GBFC_ROOT/vendor/skills"
+        ;;
+      verify)
+        python3 "$ROOT/lib/validate_skills.py" \
+          --skills "$GBFC_PLUGIN_DIR/skills" \
+          --allowlist "$GBFC_ROOT/vendor/skill-allowlist.txt" \
+          --policy "$GBFC_ROOT/vendor/skill-policy.json"
+        ;;
+      *) echo "Usage: agy-bestfriend skills list|verify" >&2; exit 2 ;;
+    esac
+    ;;
+  mcp)
+    case "${1:-}" in
+      status|list)
+        python3 "$ROOT/lib/mcp.py" classify-all --policy "$ROOT/vendor/mcp-policy.json"
+        ;;
+      repair|add)
+        python3 "$ROOT/lib/mcp.py" add --name "${2:-}" --policy "$ROOT/vendor/mcp-policy.json"
+        ;;
+      remove)
+        python3 "$ROOT/lib/mcp.py" remove --name "${2:-}"
+        ;;
+      *) echo "Usage: agy-bestfriend mcp status|add <name>|remove <name>" >&2; exit 2 ;;
+    esac
+    ;;
+  design-bank)
+    case "${1:-}" in
+      status)
+        if bank="$(gbfc_discover_design_bank)"; then
+          echo "Design Bank: $bank"
+        else
+          echo "Design Bank: NOT_CONFIGURED"
+        fi
+        ;;
+      rediscover) gbfc_design_bank_rediscover ;;
+      *) echo "Usage: agy-bestfriend design-bank status|rediscover" >&2; exit 2 ;;
+    esac
+    ;;
+  design-intelligence)
+    python3 "$ROOT/scripts/design-intelligence.py" "$@"
+    ;;
+  serena)
+    case "${1:-}" in
+      enable)
+        python3 "$ROOT/lib/mcp.py" add --name serena --policy "$ROOT/vendor/mcp-policy.json"
+        echo "serena MCP enabled in Antigravity. Disable with: agy-bestfriend serena disable"
+        ;;
+      disable)
+        python3 "$ROOT/lib/mcp.py" remove --name serena
+        echo "serena MCP disabled."
+        ;;
+      *) echo "Usage: agy-bestfriend serena enable|disable" >&2; exit 2 ;;
+    esac
+    ;;
+  chromium)
+    exec "$GBFC_CDP" "$@"
+    ;;
+  context-guard)
+    if [[ $# -eq 0 ]]; then
+      exec "$GBFC_CONTEXT_GUARD" status
+    fi
+    exec "$GBFC_CONTEXT_GUARD" "$@"
+    ;;
+  ""|-h|--help)
+    cat <<'HELP_EOF'
+agy-bestfriend doctor [--repair] [--strict]
+agy-bestfriend install [--dry-run]
+agy-bestfriend uninstall
+agy-bestfriend restore [--list|STAMP]
+agy-bestfriend skills list|verify
+agy-bestfriend mcp status|add|remove
+agy-bestfriend design-bank status|rediscover
+agy-bestfriend design-intelligence status|doctor|search|shortlist
+agy-bestfriend serena enable|disable
+agy-bestfriend chromium start|status|stop|resolve
+agy-bestfriend context-guard status|self-test|cache|prune
+HELP_EOF
+    ;;
+  *)
+    gbfc_die "unknown command: $cmd"
+    ;;
+esac

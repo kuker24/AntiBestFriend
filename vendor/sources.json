@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-19",
+  "snapshot": "GrokBestFriend 1.3.1",
+  "compatibility": {
+    "product": "1.3.1",
+    "grok": "1.0.4",
+    "note": "Grok CLI and uv still install from official mutable scripts. The installer verifies the resulting binary version, not the script checksum."
+  },
+  "grok": {
+    "seenVersion": "1.0.4",
+    "installUrl": "https://x.ai/cli/install.sh"
+  },
+  "sources": {
+    "codebase-memory": {
+      "repository": "https://github.com/DeusData/codebase-memory-mcp",
+      "version": "0.9.0",
+      "platform": "linux-x86_64",
+      "artifactUrl": "https://github.com/DeusData/codebase-memory-mcp/releases/download/v0.9.0/codebase-memory-mcp-linux-amd64-portable.tar.gz",
+      "artifactSha256": "8459d5c9d1457f2c82de3de307ffc7641ecbba2dde893427be1e62eca8ef9b25"
+    },
+    "serena": {
+      "repository": "https://github.com/oraios/serena",
+      "version": "1.6.1",
+      "package": "serena-agent",
+      "python": "3.13"
+    },
+    "browser-act": {
+      "repository": "https://github.com/browser-act/skills",
+      "version": "1.3.0",
+      "package": "browser-act-cli",
+      "python": "3.12"
+    },
+    "semgrep": {
+      "package": "semgrep",
+      "version": "1.171.0",
+      "via": "uv-tool"
+    },
+    "gitleaks": {
+      "repository": "https://github.com/gitleaks/gitleaks",
+      "version": "8.30.1",
+      "artifactUrl": "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
+      "artifactSha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    },
+    "osv-scanner": {
+      "repository": "https://github.com/google/osv-scanner",
+      "version": "2.4.0",
+      "artifactUrl": "https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64",
+      "artifactSha256": "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0"
+    },
+    "uv": {
+      "installUrl": "https://astral.sh/uv/install.sh",
+      "version": "0.11.29"
+    },
+    "shadcn": {
+      "repository": "https://github.com/shadcn-ui/ui",
+      "package": "shadcn",
+      "version": "4.18.0",
+      "via": "npx",
+      "engines": {
+        "node": ">=20.18.1"
+      },
+      "note": "Pinned CLI version for MCP stdio. npx downloads the package; there is no artifactSha256. engines.node matches the npm package."
+    },
+    "design-bank": {
+      "version": "1.0.0",
+      "artifactUrl": "https://github.com/kuker24/GrokBestFriend/releases/download/v1.0.0/Design-bank.tgz",
+      "artifactSha256": "9866f5a82f57f84c45f4f82af8092f9bd3a6838b5c12d6b097e3eb4fda5b634c",
+      "dest": "~/Design"
+    },
+    "matt-pocock-skills": {
+      "repository": "https://github.com/mattpocock/skills",
+      "commit": "9c9f36ccd3995266cd675468af71639c8dde1ec5",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2026 Matt Pocock",
+      "licenseFile": "vendor/licenses/MATT-POCOCK-MIT.txt",
+      "archiveSha256": "edbe85fd6773e3d59759ed489e9b1ce1b2ff4924b06c1f4389cecd3e899e4db2",
+      "paths": [
+        "skills/engineering/diagnosing-bugs",
+        "skills/engineering/domain-modeling",
+        "skills/engineering/codebase-design",
+        "skills/productivity/writing-for-agents",
+        "skills/engineering/research",
+        "skills/engineering/prototype",
+        "skills/productivity/grilling",
+        "skills/engineering/improve-codebase-architecture",
+        "skills/engineering/wizard",
+        "skills/productivity/wait-what"
+      ],
+      "note": "Selected skills only. Full Matt plugin and agents/openai.yaml are not installed."
+    },
+    "pstack": {
+      "repository": "https://github.com/cursor/plugins",
+      "commit": "60c641e4fad674784b30abcf9f8915dea39df38d",
+      "subdir": "pstack",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2026 Lauren Tan",
+      "licenseFile": "vendor/licenses/PSTACK-MIT.txt",
+      "archiveSha256": "c6c4672e5be2fd4479fa03d92fc5ad04ffdce07e3b582f1856520a7c1cf0bfef",
+      "paths": [
+        "pstack/skills/blast-radius",
+        "pstack/skills/unslop",
+        "pstack/skills/create-verification-skill",
+        "pstack/skills/maintain-verification-skill",
+        "pstack/skills/technical-writing",
+        "pstack/skills/arena",
+        "pstack/skills/interrogate",
+        "pstack/skills/architect",
+        "pstack/skills/show-me-your-work",
+        "pstack/skills/why",
+        "pstack/skills/reflect",
+        "pstack/skills/figure-it-out"
+      ],
+      "note": "Selected skills only. show-me-your-work is renamed decision-log. Full Pstack plugin, automations, and the 21 principle skills are not installed."
+    }
+  }
+}

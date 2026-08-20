@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""Context Guard hook + CLI entry for AntigravityBestFriend.
+
+Hook mode (default): read JSON on stdin, write JSON on stdout.
+CLI: status | self-test | cache | prune | enable | disable
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def _bootstrap() -> Path:
+    here = Path(__file__).resolve()
+    candidates = []
+    managed = os.environ.get("GBFC_MANAGED")
+    if managed:
+        candidates.append(Path(managed) / "lib")
+    candidates.append(here.parent.parent / "lib")
+    candidates.append(Path.home() / ".gemini" / "antigravity-bestfriend" / "lib")
+    for lib in candidates:
+        if (lib / "context_guard" / "__init__.py").is_file():
+            if str(lib) not in sys.path:
+                sys.path.insert(0, str(lib))
+            return lib
+    sys.stderr.write("ERROR: context_guard package not found\n")
+    raise SystemExit(2)
+
+
+_bootstrap()
+
+from context_guard.agy_adapter import handle_agy_event, is_antigravity_event  # noqa: E402
+from context_guard.cache import cache_status, prune  # noqa: E402
+from context_guard.events import (  # noqa: E402
+    EMERGENCY_STOP,
+    handle_event,
+    parse_stdin,
+    payload_for_exception,
+    read_bounded,
+)
+from context_guard.images import derive_image, pillow_available  # noqa: E402
+from context_guard.ledger import Ledger  # noqa: E402
+from context_guard.outputs import reduce_output  # noqa: E402
+from context_guard.policy import load_policy, managed_paths  # noqa: E402
+
+
+def _managed() -> Path:
+    env = os.environ.get("GBFC_MANAGED")
+    if env:
+        return Path(env)
+    return Path.home() / ".gemini" / "antigravity-bestfriend"
+
+
+def cmd_status() -> int:
+    managed = _managed()
+    paths = managed_paths(managed)
+    print("product antigravity-bestfriend")
+    print("runtime", "SET" if paths["bin"].is_file() or (managed / "bin" / "agy-context-guard").is_file() else "NOT_SET")
+    print("lib", "SET" if (paths["lib"] / "__init__.py").is_file() else "NOT_SET")
+    print("config", "SET" if paths["config"].is_file() else "NOT_SET")
+    print("pillow", "SET" if pillow_available() else "NOT_SET")
+    print("cache", json.dumps(cache_status(paths["cache"])))
+    print("CONTEXT_GUARD=READY")
+    return 0
+
+
+def cmd_self_test() -> int:
+    """Offline functional checks."""
+    import tempfile
+
+    failed = 0
+
+    def check(ok: bool, label: str) -> None:
+        nonlocal failed
+        print(("PASS" if ok else "FAIL"), label)
+        if not ok:
+            failed += 1
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        managed = root / "managed"
+        cache = managed / "context-cache"
+        (managed / "config").mkdir(parents=True)
+        (managed / "bin").mkdir(parents=True)
+        os.environ["GBFC_MANAGED"] = str(managed)
+
+        small = root / "small.png"
+        big = root / "big.png"
+        if pillow_available():
+            from PIL import Image
+
+            Image.new("RGB", (64, 64), color=(10, 20, 30)).save(small)
+            d = derive_image(str(small), root / "derived")
+            check(d.action == "pass", "small-image-pass")
+
+            Image.new("RGB", (2400, 1800), color=(80, 10, 10)).save(big)
+            d = derive_image(str(big), root / "derived")
+            check(d.action == "derive_deny" and d.derived is not None, "oversized-derive-deny")
+            if d.derived:
+                check(Path(d.derived).stat().st_size <= 393216, "derived-under-byte-cap")
+                with Image.open(d.derived) as im:
+                    check(max(im.size) <= 1200, "derived-under-px-cap")
+        else:
+            print("SKIP image-derive DEGRADED_NO_IMAGE_RESIZER")
+            small.write_bytes(b"not-an-image")
+            big.write_bytes(b"x" * 500000)
+
+        from io import BytesIO
+
+        check(read_bounded(BytesIO(b"x" * 20), 10) is None, "bounded-stdin-read")
+        check(read_bounded(BytesIO(b"abc"), 10) == b"abc", "bounded-stdin-ok")
+
+        led = Ledger(cache, "teststream")
+        check(led.claim_image() is True, "first-image-claim")
+        check(led.claim_image() is False, "second-image-denied")
+        led.advance_epoch()
+        check(led.claim_image() is True, "next-batch-claim")
+
+        # AGY adapter test
+        agy_ev = {
+            "conversationId": "test-conv",
+            "toolCall": {
+                "name": "run_command",
+                "args": {"CommandLine": "ls -la"}
+            }
+        }
+        agy_res = handle_agy_event(agy_ev, managed=managed)
+        check(agy_res.get("decision") == "allow", "agy-pre-tool-use-allow")
+
+    print("SELF_TEST", "FAIL" if failed else "PASS")
+    return 1 if failed else 0
+
+
+def cmd_cache() -> int:
+    paths = managed_paths(_managed())
+    print(json.dumps(cache_status(paths["cache"]), indent=2))
+    return 0
+
+
+def cmd_prune() -> int:
+    paths = managed_paths(_managed())
+    result = prune(paths["cache"])
+    print("PRUNE", json.dumps(result))
+    return 0
+
+
+def run_from_stdin() -> int:
+    managed = _managed()
+    policy = load_policy(managed_paths(managed)["config"])
+    limit = int(policy.get("maxStdinBytes", 1048576))
+    raw = read_bounded(sys.stdin.buffer, limit)
+    if raw is None:
+        sys.stdout.write(json.dumps(EMERGENCY_STOP) + "\n")
+        sys.stdout.flush()
+        return 0
+    parsed = parse_stdin(raw, limit)
+    if parsed is None:
+        sys.stdout.write(json.dumps(EMERGENCY_STOP) + "\n")
+        sys.stdout.flush()
+        return 0
+
+    try:
+        if is_antigravity_event(parsed):
+            payload = handle_agy_event(parsed, managed=managed)
+        else:
+            payload = handle_event(parsed, managed=managed)
+    except Exception as exc:
+        payload = payload_for_exception(parsed, exc)
+
+    sys.stdout.write(json.dumps(payload or {}) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if not argv or argv[0] in {"hook", "-"}:
+        return run_from_stdin()
+    cmd = argv[0]
+    if cmd == "status":
+        return cmd_status()
+    if cmd == "self-test":
+        return cmd_self_test()
+    if cmd == "cache":
+        return cmd_cache()
+    if cmd == "prune":
+        return cmd_prune()
+    if cmd in {"-h", "--help"}:
+        sys.stdout.write(
+            "agy-context-guard                 # hook mode (stdin JSON)\n"
+            "agy-context-guard status\n"
+            "agy-context-guard self-test\n"
+            "agy-context-guard cache\n"
+            "agy-context-guard prune\n"
+        )
+        return 0
+    sys.stderr.write(f"unknown command: {cmd}\n")
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

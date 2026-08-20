@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "catalog_schema_version": 1,
+  "keep_generations": 2,
+  "zip": {
+    "max_members": 20000,
+    "max_member_uncompressed": 52428800,
+    "max_total_uncompressed": 2147483648,
+    "max_compression_ratio": 200,
+    "max_read_bytes": 1048576
+  },
+  "text": {
+    "name_max": 160,
+    "description_max": 400,
+    "field_max": 240,
+    "tag_max": 48,
+    "tag_count_max": 24,
+    "search_text_max": 1200
+  },
+  "search": {
+    "system_limit": 5,
+    "structure_limit": 3,
+    "recipe_limit": 3,
+    "specialist_limit": 3,
+    "diversity_penalty": 4.0,
+    "min_score": 0.01,
+    "weights": {
+      "name": 8.0,
+      "id": 4.0,
+      "description": 3.0,
+      "category": 2.5,
+      "tags": 2.0,
+      "summary": 2.0
+    }
+  },
+  "secret_pattern_parts": [
+    ["XAI_API_", "KEY", "\\s*[=:]\\s*(?:\"[^\"]*\"|'[^']*'|\\S+)"],
+    ["gho_", "[A-Za-z0-9]{10,}"],
+    ["xai-", "[A-Za-z0-9]{16,}"],
+    ["Bearer ", "[A-Za-z0-9._-]{20,}"]
+  ],
+  "license_files": ["LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING"],
+  "license_aliases": {
+    "MIT": "MIT",
+    "Apache-2.0": "Apache-2.0",
+    "Apache-2": "Apache-2.0"
+  },
+  "license_signatures": {
+    "MIT": {
+      "required": [
+        "MIT License",
+        "Permission is hereby granted, free of charge",
+        "THE SOFTWARE IS PROVIDED"
+      ],
+      "forbidden": [
+        "not licensed under the mit",
+        "not distributed under the mit"
+      ]
+    },
+    "Apache-2.0": {
+      "required": [
+        "Apache License",
+        "Version 2.0",
+        "http://www.apache.org/licenses/LICENSE-2.0"
+      ],
+      "any_of": [
+        "Licensed under the Apache License",
+        "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION"
+      ],
+      "forbidden": [
+        "not distributed under the apache",
+        "not licensed under the apache"
+      ]
+    }
+  },
+  "stub_markers": [
+    "This catalogue entry advertises the skill in Open Design",
+    "install the upstream"
+  ],
+  "install_command_markers": [
+    "npx skills add",
+    "git clone ",
+    "npm install ",
+    "pip install "
+  ],
+  "instruction_tells": [
+    "ignore previous",
+    "ignore all previous",
+    "you must run",
+    "you must execute",
+    "run this command",
+    "do not tell the user"
+  ],
+  "connector_names": ["od", "agent-browser", "figma"],
+  "provider_names": ["fal", "venice", "replicate", "sora", "imagen"],
+  "specials": {
+    "design-taste-frontend": {"execution_class": "reference-only"},
+    "gpt-taste": {"execution_class": "reference-only"},
+    "design-brief": {"execution_class": "reference-only"},
+    "reference-design-contract": {"execution_class": "reference-only"},
+    "creative-director": {"execution_class": "stub"},
+    "brand-extract": {"execution_class": "connector-required", "capabilities_required": ["od", "agent-browser"]},
+    "emil-design-eng": {"execution_class": "reference-only"},
+    "review-animations": {"execution_class": "reference-only", "warnings": ["DISABLE_MODEL_INVOCATION"]},
+    "d3-visualization": {"execution_class": "stub"},
+    "threejs": {"execution_class": "stub"},
+    "shader-dev": {"execution_class": "stub"},
+    "apple-hig": {"execution_class": "stub"},
+    "platform-design": {"execution_class": "stub"},
+    "shadcn-ui": {"execution_class": "stub"}
+  },
+  "figma_prefix": "figma-",
+  "curated_fixture_origin": "Open Design curated bundled fixture",
+  "enums": {
+    "kind": ["system", "structure", "recipe", "specialist", "visual"],
+    "license_status": ["known", "declared-only", "unknown", "conflicting"],
+    "redistribution": ["allowed", "local-only", "blocked", "unknown"],
+    "trust": ["first-party", "upstream", "curated", "community", "unknown"],
+    "evidence_tier": ["E0", "E1", "E2", "E3"],
+    "execution_class": [
+      "stub",
+      "reference-only",
+      "connector-required",
+      "provider-required",
+      "quarantined",
+      "native-candidate",
+      "adapted-candidate"
+    ],
+    "style_authority": ["authoritative", "inspiration-only", "structure-only", "none"],
+    "search_policy": ["metadata-only", "never"],
+    "selection_policy": ["full-on-selection", "normalized-card-only", "metadata-only", "never"],
+    "normalization_status": ["complete", "partial", "manual-required"],
+    "dedup_reason": ["path-lineage", "content-hash", "normalized-id"],
+    "runtime_availability": ["available", "unavailable", "unknown"]
+  }
+}

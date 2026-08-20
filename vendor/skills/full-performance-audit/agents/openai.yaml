@@ -1,0 +1,15 @@
+name: full-performance-audit
+description: Audit application performance including latency, throughput, and bundle size
+version: 1.0.0
+triggers:
+  - "performance audit"
+  - "profiling"
+  - "bottleneck"
+  - "optimization"
+  - "core web vitals"
+keywords:
+  - performance
+  - audit
+  - profiling
+  - optimization
+  - latency
