@@ -1,4 +1,4 @@
-# AntigravityBestFriend (`antigravity-bestfriend`)
+# AntiBestFriend (`antigravity-bestfriend`)
 
 > **Native Google Antigravity CLI Plugin & Agentic Runtime Ecosystem**
 > Complete semantic port of ClaudeBestFriend / GrokBestFriend into a first-class Google Antigravity CLI (`agy`) native plugin.
@@ -81,10 +81,14 @@
 ### Installation
 
 ```bash
-# Run transactional installer
+# 1. Clone the repository
+git clone https://github.com/kuker24/AntiBestFriend.git
+cd AntiBestFriend
+
+# 2. Run transactional installer (auto-sets up plugin, MCPs, rules, and agy --yolo wrapper)
 ./install.sh
 
-# Or test in dry-run mode
+# Or test with dry-run mode first
 ./install.sh --dry-run
 ```
 

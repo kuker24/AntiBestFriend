@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+.serena/
+.gbf-agy-owned.json
+tx/
+backups/
+stage/
+context-cache/
+chromium-profile/
+.DS_Store

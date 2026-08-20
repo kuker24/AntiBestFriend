@@ -54,7 +54,7 @@ payload = {
     "productVersion": version,
     "installed_at": now,
     "source": {
-        "repo": "https://github.com/kuker24/ClaudeBestFriend",
+        "repo": "https://github.com/kuker24/AntiBestFriend",
         "commit": commit,
         "branch": "main",
         "path": root,
