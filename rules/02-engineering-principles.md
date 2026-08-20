@@ -2,7 +2,7 @@
 
 Read this file only when a skill or the user asks for operational principles. Do not `@`-import it. Path after install:
 
-`~/.claude/grokbestfriend-claude/rules/02-engineering-principles.md`
+`~/.gemini/antigravity-bestfriend/rules/02-engineering-principles.md`
 
 These are working rules, not an essay. Apply the smallest set that changes the next action.
 

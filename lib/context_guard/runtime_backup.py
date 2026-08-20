@@ -18,9 +18,9 @@ from typing import Any
 from . import PRODUCT
 
 RUNTIME_FILES = (
-    "bin/gbfc-context-guard",
+    "bin/agy-context-guard",
     "bin/claude-chromium-cdp",
-    "bin/claude-gbf",
+    "bin/agy-bestfriend",
     "config/context-guard.json",
     "config/hook-ownership.json",
     "config/adapter-root.txt",

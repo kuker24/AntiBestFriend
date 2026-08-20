@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+# shellcheck source=/dev/null
+source "$GBFC_ROOT/lib/wrapper.sh"
+
 gbfc_source_field() {
   local id="$1" field="$2"
-  python3 - "$GBFC_VENDOR_SOURCE/vendor/sources.json" "$id" "$field" <<'PY'
+  python3 - "$GBFC_ROOT/vendor/sources.json" "$id" "$field" <<'PY'
 import json, sys
 from pathlib import Path
 data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -27,7 +30,6 @@ gbfc_install_codebase_memory() {
   artifact="$(gbfc_source_field codebase-memory artifactUrl)"
   expected="$(gbfc_source_field codebase-memory artifactSha256)"
   target="$GBFC_CBM_BIN"
-  existing_bin="$HOME/.claude/grokbestfriend-claude/components/codebase-memory/bin/codebase-memory-mcp"
   artifact_source="official"
 
   if [[ -x "$target" ]] && "$target" --version 2>/dev/null | grep -Fq "$version"; then
@@ -47,12 +49,23 @@ gbfc_install_codebase_memory() {
 
   mkdir -p -- "$(dirname -- "$target")" "$GBFC_MANAGED/config"
 
-  if [[ -x "$existing_bin" ]] && "$existing_bin" --version 2>/dev/null | grep -Fq "$version"; then
-    gbfc_info "using verified local cache for codebase-memory: $existing_bin"
-    cp -a -- "$existing_bin" "$target"
-    chmod 755 -- "$target"
-    artifact_source="local-verified"
-  else
+  # Check existing managed or cache locations before downloading
+  local found_cache=0
+  for candidate in \
+    "$GBFC_MANAGED/components/codebase-memory/bin/codebase-memory-mcp" \
+    "$HOME/.claude/grokbestfriend-claude/components/codebase-memory/bin/codebase-memory-mcp" \
+    "$HOME/.gemini/antigravity-bestfriend/components/codebase-memory/bin/codebase-memory-mcp"; do
+    if [[ -x "$candidate" ]] && "$candidate" --version 2>/dev/null | grep -Fq "$version"; then
+      gbfc_info "using verified cache for codebase-memory: $candidate"
+      cp -a -- "$candidate" "$target"
+      chmod 755 -- "$target"
+      artifact_source="local-verified"
+      found_cache=1
+      break
+    fi
+  done
+
+  if [[ $found_cache -eq 0 ]]; then
     stage="$(mktemp -d)"
     if gbfc_download "$artifact" "$stage/cbm.tgz" "$expected"; then
       tar -xzf "$stage/cbm.tgz" -C "$stage"
@@ -91,52 +104,6 @@ gbfc_install_helper_bins() {
   ln -sf "$GBFC_CDP" "$HOME/.local/bin/agy-chromium-cdp"
   ln -sf "$GBFC_CONTEXT_GUARD" "$HOME/.local/bin/agy-context-guard"
 
-  # Native agy wrapper installation
+  # Install hardened wrapper
   gbfc_install_agy_yolo_wrapper
-}
-
-gbfc_install_agy_yolo_wrapper() {
-  local real_bin="$HOME/.local/bin/agy-real"
-  local target_bin="$HOME/.local/bin/agy"
-
-  # If agy-real does not exist and agy is an ELF binary, move agy to agy-real
-  if [[ ! -f "$real_bin" && -f "$target_bin" ]]; then
-    if file "$target_bin" | grep -q "ELF"; then
-      mv -f "$target_bin" "$real_bin"
-      chmod +x "$real_bin"
-    fi
-  fi
-
-  # Install agy wrapper supporting --yolo
-  cat << 'WRAPPER_EOF' > "$target_bin"
-#!/usr/bin/env bash
-set -euo pipefail
-
-REAL_AGY="${REAL_AGY:-$HOME/.local/bin/agy-real}"
-if [[ ! -x "$REAL_AGY" ]]; then
-  # Fallback discovery
-  REAL_AGY="$(which -a agy-real 2>/dev/null | head -n 1 || true)"
-fi
-
-if [[ ! -x "$REAL_AGY" ]]; then
-  printf 'ERROR: agy-real binary not found at %s\n' "$REAL_AGY" >&2
-  exit 1
-fi
-
-args=()
-for arg in "$@"; do
-  case "$arg" in
-    --yolo|-y)
-      args+=("--dangerously-skip-permissions")
-      ;;
-    *)
-      args+=("$arg")
-      ;;
-  esac
-done
-
-exec "$REAL_AGY" "${args[@]}"
-WRAPPER_EOF
-  chmod +x "$target_bin"
-  gbfc_info "Native agy --yolo wrapper configured at $target_bin"
 }

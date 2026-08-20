@@ -55,11 +55,11 @@ def managed_paths(managed: Path) -> dict[str, Path]:
     managed = Path(managed)
     return {
         "managed": managed,
-        "bin": managed / "bin" / "gbfc-context-guard",
+        "bin": managed / "bin" / "agy-context-guard",
         "lib": managed / "lib" / "context_guard",
         "config": managed / "config" / "context-guard.json",
         "ownership": managed / "config" / "hook-ownership.json",
         "cache": managed / "context-cache",
         "tx": managed / "tx",
-        "dispatch": managed / "bin" / "claude-gbf",
+        "dispatch": managed / "bin" / "agy-bestfriend",
     }

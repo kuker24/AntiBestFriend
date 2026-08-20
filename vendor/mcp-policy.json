@@ -5,7 +5,7 @@
       "enabled": true,
       "transport": "stdio",
       "commandKind": "owned-binary",
-      "command": "/home/fahmiagent/.gemini/antigravity-bestfriend/components/codebase-memory/bin/codebase-memory-mcp",
+      "command": "@CODEBASE_MEMORY_BIN@",
       "args": []
     },
     "context7": {
@@ -35,11 +35,6 @@
         "--open-web-dashboard",
         "false"
       ]
-    },
-    "exa": {
-      "enabled": false,
-      "transport": "http",
-      "serverUrl": "https://mcp.exa.ai/mcp"
     }
   }
 }

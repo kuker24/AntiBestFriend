@@ -176,6 +176,42 @@ agy-bestfriend uninstall
 
 ---
 
+
+---
+
+## 🧪 Automated Test Suite
+
+AntiBestFriend includes comprehensive end-to-end and transactional fault-injection test coverage:
+
+```bash
+# Run skills parity and policy verification
+python3 tests/test_skills_parity.py
+
+# Run MCP foreign-safety & zero-Exa policy test
+python3 tests/test_mcp_policy.py
+
+# Run YOLO wrapper argument & recursion tests
+./tests/test_yolo_wrapper.sh
+
+# Run Design Intelligence functional test
+python3 tests/test_design_intelligence_functional.py
+
+# Run tracked bytecode, personal paths & residue gate
+./tests/test_residue_gate.sh
+
+# Run transactional fault-injection across all state machine states
+./tests/test_fault_injection.sh
+
+# Run self-contained managed runtime test
+./tests/test_self_contained_runtime.sh
+
+# Run installation idempotency test
+./tests/test_idempotency.sh
+
+# Run isolated HOME installation test
+./tests/test_isolated_home.sh
+```
+
 ## 🛡 Safety & Rollback
 
 AntigravityBestFriend marks every owned asset with `.gbf-agy-owned.json`. It never mutates user authentication tokens or foreign MCP servers. 

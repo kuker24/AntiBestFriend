@@ -2,7 +2,7 @@
 
 Used by `/figure-it-out` and any long unattended run that needs an audit trail. Do **not** invoke `/decision-log` from another manual skill unless the user typed that slash. Path after install:
 
-`~/.claude/grokbestfriend-claude/rules/decision-log-protocol.md`
+`~/.gemini/antigravity-bestfriend/rules/decision-log-protocol.md`
 
 ## What this is
 
@@ -26,7 +26,7 @@ Default: `decisions.tsv` in the work dir, or `.audit/<task-slug>.tsv`. Leave it 
 
 ## How to write a row
 
-Prefer `~/.claude/skills/decision-log/scripts/log.sh <logfile> <phase> <decision> <why> <evidence> <result>` when that skill is installed. The helper:
+Prefer `~/.gemini/skills/decision-log/scripts/log.sh <logfile> <phase> <decision> <why> <evidence> <result>` when that skill is installed. The helper:
 
 - writes the header on first use
 - strips tabs/newlines
@@ -34,7 +34,7 @@ Prefer `~/.claude/skills/decision-log/scripts/log.sh <logfile> <phase> <decision
 
 ## Transcript
 
-If you audit the log against the session, use only the **active** transcript path the system prompt names. Do not glob `~/.claude/projects/*` or `~/.cursor/projects/*`. If no safe path exists, write a short session digest instead.
+If you audit the log against the session, use only the **active** transcript path the system prompt names. Do not glob `~/.gemini/projects/*` or `~/.cursor/projects/*`. If no safe path exists, write a short session digest instead.
 
 ## Rules
 

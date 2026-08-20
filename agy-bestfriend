@@ -2,7 +2,12 @@
 set -euo pipefail
 umask 077
 
-resolve_root() {
+resolve_runtime_root() {
+  local managed="${GBFC_MANAGED:-$HOME/.gemini/antigravity-bestfriend}"
+  if [[ -f "$managed/lib/common.sh" ]]; then
+    printf '%s\n' "$managed"
+    return 0
+  fi
   local src="${BASH_SOURCE[0]}"
   while [[ -L "$src" ]]; do
     local dir
@@ -13,14 +18,9 @@ resolve_root() {
   cd -- "$(dirname -- "$src")/.." && pwd
 }
 
-ROOT="$(resolve_root)"
+ROOT="$(resolve_runtime_root)"
 if [[ ! -f "$ROOT/lib/common.sh" ]]; then
-  if [[ -f "$HOME/.gemini/antigravity-bestfriend/config/adapter-root.txt" ]]; then
-    ROOT="$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <"$HOME/.gemini/antigravity-bestfriend/config/adapter-root.txt" | head -n 1)"
-  fi
-fi
-if [[ ! -f "$ROOT/lib/common.sh" ]]; then
-  printf 'ERROR: cannot resolve AntigravityBestFriend root\n' >&2
+  printf 'ERROR: Cannot resolve AntiBestFriend runtime root\n' >&2
   exit 1
 fi
 
@@ -28,6 +28,8 @@ fi
 source "$ROOT/lib/common.sh"
 # shellcheck source=/dev/null
 source "$ROOT/lib/transaction.sh"
+# shellcheck source=/dev/null
+source "$ROOT/lib/wrapper.sh"
 # shellcheck source=/dev/null
 source "$ROOT/lib/design-bank.sh"
 # shellcheck source=/dev/null
@@ -54,24 +56,39 @@ case "$cmd" in
     gbfc_doctor
     ;;
   install)
-    exec "$ROOT/install.sh" "$@"
+    if [[ -f "$GBFC_ROOT/install.sh" ]]; then
+      exec "$GBFC_ROOT/install.sh" "$@"
+    else
+      exec "$ROOT/lib/install.sh" "$@"
+    fi
     ;;
   uninstall)
-    exec "$ROOT/uninstall.sh" "$@"
+    if [[ -f "$GBFC_ROOT/uninstall.sh" ]]; then
+      exec "$GBFC_ROOT/uninstall.sh" "$@"
+    else
+      gbfc_die "uninstall script not found"
+    fi
     ;;
   restore)
-    exec "$ROOT/restore.sh" "$@"
+    if [[ "${1:-}" == "--list" ]]; then
+      gbfc_list_backups
+      exit 0
+    fi
+    stamp="${1:-}"
+    gbfc_lock_begin
+    trap 'gbfc_lock_end' EXIT
+    gbfc_restore_backup "$stamp"
     ;;
   skills)
     case "${1:-}" in
       list)
-        ls -1 "$GBFC_PLUGIN_DIR/skills" 2>/dev/null || ls -1 "$GBFC_ROOT/vendor/skills"
+        ls -1 "$GBFC_PLUGIN_DIR/skills" 2>/dev/null || ls -1 "$GBFC_MANAGED/skills" 2>/dev/null || ls -1 "$ROOT/vendor/skills"
         ;;
       verify)
         python3 "$ROOT/lib/validate_skills.py" \
           --skills "$GBFC_PLUGIN_DIR/skills" \
-          --allowlist "$GBFC_ROOT/vendor/skill-allowlist.txt" \
-          --policy "$GBFC_ROOT/vendor/skill-policy.json"
+          --allowlist "$GBFC_MANAGED/vendor/skill-allowlist.txt" \
+          --policy "$GBFC_MANAGED/vendor/skill-policy.json"
         ;;
       *) echo "Usage: agy-bestfriend skills list|verify" >&2; exit 2 ;;
     esac
@@ -79,15 +96,23 @@ case "$cmd" in
   mcp)
     case "${1:-}" in
       status|list)
-        python3 "$ROOT/lib/mcp.py" classify-all --policy "$ROOT/vendor/mcp-policy.json"
+        python3 "$ROOT/lib/mcp.py" classify-all --policy "$GBFC_MANAGED/vendor/mcp-policy.json"
         ;;
       repair|add)
-        python3 "$ROOT/lib/mcp.py" add --name "${2:-}" --policy "$ROOT/vendor/mcp-policy.json"
+        python3 "$ROOT/lib/mcp.py" add --name "${2:-}" --policy "$GBFC_MANAGED/vendor/mcp-policy.json"
         ;;
       remove)
         python3 "$ROOT/lib/mcp.py" remove --name "${2:-}"
         ;;
       *) echo "Usage: agy-bestfriend mcp status|add <name>|remove <name>" >&2; exit 2 ;;
+    esac
+    ;;
+  wrapper)
+    case "${1:-}" in
+      status) gbfc_wrapper_status ;;
+      repair) gbfc_wrapper_repair ;;
+      refresh) gbfc_wrapper_refresh ;;
+      *) echo "Usage: agy-bestfriend wrapper status|repair|refresh" >&2; exit 2 ;;
     esac
     ;;
   design-bank)
@@ -108,15 +133,18 @@ case "$cmd" in
     ;;
   serena)
     case "${1:-}" in
+      status)
+        python3 "$ROOT/lib/mcp.py" classify --name serena --policy "$GBFC_MANAGED/vendor/mcp-policy.json"
+        ;;
       enable)
-        python3 "$ROOT/lib/mcp.py" add --name serena --policy "$ROOT/vendor/mcp-policy.json"
-        echo "serena MCP enabled in Antigravity. Disable with: agy-bestfriend serena disable"
+        python3 "$ROOT/lib/mcp.py" add --name serena --policy "$GBFC_MANAGED/vendor/mcp-policy.json"
+        echo "serena MCP enabled in Antigravity."
         ;;
       disable)
         python3 "$ROOT/lib/mcp.py" remove --name serena
         echo "serena MCP disabled."
         ;;
-      *) echo "Usage: agy-bestfriend serena enable|disable" >&2; exit 2 ;;
+      *) echo "Usage: agy-bestfriend serena status|enable|disable" >&2; exit 2 ;;
     esac
     ;;
   chromium)
@@ -136,14 +164,15 @@ agy-bestfriend uninstall
 agy-bestfriend restore [--list|STAMP]
 agy-bestfriend skills list|verify
 agy-bestfriend mcp status|add|remove
+agy-bestfriend wrapper status|repair|refresh
 agy-bestfriend design-bank status|rediscover
 agy-bestfriend design-intelligence status|doctor|search|shortlist
-agy-bestfriend serena enable|disable
+agy-bestfriend serena status|enable|disable
 agy-bestfriend chromium start|status|stop|resolve
 agy-bestfriend context-guard status|self-test|cache|prune
 HELP_EOF
     ;;
   *)
-    gbfc_die "unknown command: $cmd"
+    gbfc_die "Unknown command: $cmd"
     ;;
 esac

@@ -31,6 +31,9 @@ gbfc_error() { printf 'ERROR: %s\n' "$*" >&2; }
 gbfc_die() { gbfc_error "$*"; exit 1; }
 gbfc_have() { command -v "$1" >/dev/null 2>&1; }
 
+gbfc_backup_root() { printf '%s/backups\n' "$GBFC_MANAGED"; }
+gbfc_stage_root() { printf '%s/stage\n' "$GBFC_MANAGED"; }
+
 gbfc_product_version() {
   tr -d '[:space:]' <"$GBFC_ROOT/VERSION"
 }
@@ -49,29 +52,26 @@ gbfc_sha256_file() {
 
 gbfc_load_allowlist() {
   GBFC_SKILL_NAMES=()
-  local line
+  local line allow="$GBFC_VENDOR_SOURCE/vendor/skill-allowlist.txt"
+  [[ -f "$allow" ]] || allow="$GBFC_ROOT/vendor/skill-allowlist.txt"
+  [[ -f "$allow" ]] || allow="$GBFC_MANAGED/vendor/skill-allowlist.txt"
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" || "$line" == \#* ]] && continue
     GBFC_SKILL_NAMES+=("$line")
-  done <"$GBFC_VENDOR_SOURCE/vendor/skill-allowlist.txt"
+  done <"$allow"
 }
 
 gbfc_load_rule_allowlist() {
   GBFC_RULE_NAMES=()
-  local line file
-  file="$GBFC_VENDOR_SOURCE/vendor/rule-allowlist.txt"
-  [[ -f "$file" ]] || file="$GBFC_ROOT/vendor/rule-allowlist.txt"
-  [[ -f "$file" ]] || gbfc_die "missing vendor/rule-allowlist.txt"
+  local line allow="$GBFC_VENDOR_SOURCE/vendor/rule-allowlist.txt"
+  [[ -f "$allow" ]] || allow="$GBFC_ROOT/vendor/rule-allowlist.txt"
+  [[ -f "$allow" ]] || allow="$GBFC_MANAGED/vendor/rule-allowlist.txt"
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" || "$line" == \#* ]] && continue
     GBFC_RULE_NAMES+=("$line")
-  done <"$file"
+  done <"$allow"
 }
 
 gbfc_now() {
-  date -u +"%Y-%m-%dT%H:%M:%SZ"
-}
-
-gbfc_stamp() {
-  date -u +"%Y%m%dT%H%M%SZ"
+  date -u +"%Y%m%d%H%M%SZ"
 }

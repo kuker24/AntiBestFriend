@@ -33,7 +33,7 @@ class SettingsHooksError(Exception):
 
 
 def default_command(managed: Path | None = None) -> str:
-    root = managed or (Path.home() / ".claude" / "grokbestfriend-claude")
+    root = managed or (Path.home() / ".gemini" / "antigravity-bestfriend")
     return str((root / "bin" / HOOK_BIN_NAME).resolve())
 
 

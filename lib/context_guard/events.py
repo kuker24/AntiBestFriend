@@ -48,7 +48,7 @@ def resolve_managed() -> Path:
     env = os.environ.get("GBFC_MANAGED")
     if env:
         return Path(env)
-    return Path.home() / ".claude" / "grokbestfriend-claude"
+    return Path.home() / ".gemini" / "antigravity-bestfriend"
 
 
 def read_bounded(stream: BinaryIO, limit: int) -> bytes | None:

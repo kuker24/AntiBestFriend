@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
+[[ -n "${GBFC_LIB_DIR:-}" ]] || GBFC_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+[[ -f "$GBFC_LIB_DIR/common.sh" ]] && source "$GBFC_LIB_DIR/common.sh"
+
 
 gbfc_stage_skills() {
   local stage
-  stage="$(gbfc_stage_root)/skills"
+  stage="$(gbfc_stage_root)/antigravity-bestfriend"
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
-    gbfc_info "WOULD_STAGE_SKILLS -> $stage"
+    gbfc_info "WOULD_STAGE_PLUGIN -> $stage"
     return 0
   fi
   rm -rf -- "$stage"
-  mkdir -p -- "$stage"
+  mkdir -p -- "$stage/skills" "$stage/rules"
   gbfc_load_allowlist
 
   local name src dest overlay_file
   for name in "${GBFC_SKILL_NAMES[@]}"; do
-    src="$GBFC_VENDOR_SOURCE/vendor/skills/$name"
+    src="$GBFC_ROOT/vendor/skills/$name"
+    [[ -d "$src" ]] || src="$GBFC_MANAGED/vendor/skills/$name"
     [[ -d "$src" ]] || gbfc_die "source skill missing: $src"
-    dest="$stage/$name"
+    dest="$stage/skills/$name"
     cp -a -- "$src" "$dest"
 
     overlay_file=""
@@ -23,6 +28,10 @@ gbfc_stage_skills() {
       overlay_file="$GBFC_ROOT/overlays/$name.prepend.md"
     elif [[ -f "$GBFC_ROOT/overlays/$name.body.md" ]]; then
       overlay_file="$GBFC_ROOT/overlays/$name.body.md"
+    elif [[ -f "$GBFC_MANAGED/overlays/$name.prepend.md" ]]; then
+      overlay_file="$GBFC_MANAGED/overlays/$name.prepend.md"
+    elif [[ -f "$GBFC_MANAGED/overlays/$name.body.md" ]]; then
+      overlay_file="$GBFC_MANAGED/overlays/$name.body.md"
     fi
 
     python3 "$GBFC_ROOT/lib/overlay.py" --dest "$dest" --name "$name" ${overlay_file:+--prepend "$overlay_file"} \
@@ -37,45 +46,44 @@ gbfc_stage_skills() {
 }
 OWN_EOF
   done
-  gbfc_info "Staged ${#GBFC_SKILL_NAMES[@]} skills in $stage"
+
+  # Copy rules into staged plugin
+  cp -a -- "$GBFC_ROOT/rules/"*.md "$stage/rules/" 2>/dev/null || cp -a -- "$GBFC_MANAGED/rules/"*.md "$stage/rules/"
+
+  # Render manifests & configs into staged plugin
+  gbfc_render_template "$GBFC_ROOT/templates/plugin.template.json" "$stage/plugin.json"
+  gbfc_render_template "$GBFC_ROOT/templates/mcp_config.template.json" "$stage/mcp_config.json"
+  gbfc_render_template "$GBFC_ROOT/templates/hooks.template.json" "$stage/hooks.json"
+
+  gbfc_info "Staged complete plugin in $stage"
 }
 
 gbfc_swap_skills() {
-  local stage="$(gbfc_stage_root)/skills"
-  local target_plugin="$GBFC_PLUGIN_DIR/skills"
-  local target_managed="$GBFC_MANAGED/skills"
+  local stage="$(gbfc_stage_root)/antigravity-bestfriend"
+  local target_plugin="$GBFC_PLUGIN_DIR"
 
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
-    gbfc_info "WOULD_SWAP_SKILLS -> $target_plugin"
+    gbfc_info "WOULD_INSTALL_PLUGIN -> $target_plugin"
     return 0
   fi
 
-  mkdir -p -- "$target_plugin" "$target_managed"
-  gbfc_load_allowlist
+  rm -rf -- "$target_plugin"
+  mkdir -p -- "$(dirname -- "$target_plugin")"
+  cp -a -- "$stage" "$target_plugin"
 
-  local name
-  for name in "${GBFC_SKILL_NAMES[@]}"; do
-    rm -rf -- "$target_plugin/$name" "$target_managed/$name"
-    cp -a -- "$stage/$name" "$target_plugin/$name"
-    cp -a -- "$stage/$name" "$target_managed/$name"
-  done
-  gbfc_info "Installed ${#GBFC_SKILL_NAMES[@]} skills into $target_plugin"
+  # Also ensure managed runtime backup has skills & rules
+  mkdir -p -- "$GBFC_MANAGED/skills" "$GBFC_MANAGED/rules"
+  cp -a -- "$stage/skills/"* "$GBFC_MANAGED/skills/" 2>/dev/null || true
+  cp -a -- "$stage/rules/"* "$GBFC_MANAGED/rules/" 2>/dev/null || true
+
+  gbfc_info "Installed 40 skills into Antigravity runtime"
 }
 
 gbfc_install_router() {
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
-    gbfc_info "WOULD_INSTALL_ROUTER -> $GBFC_PLUGIN_DIR/rules and $GBFC_GLOBAL_ROUTER"
+    gbfc_info "WOULD_INSTALL_ROUTER -> $GBFC_GLOBAL_ROUTER"
     return 0
   fi
-
-  mkdir -p -- "$GBFC_PLUGIN_DIR/rules" "$GBFC_MANAGED/rules"
-  cp -a -- "$GBFC_ROOT/rules/"*.md "$GBFC_PLUGIN_DIR/rules/"
-  cp -a -- "$GBFC_ROOT/rules/"*.md "$GBFC_MANAGED/rules/"
-
-  # Install manifest & config in plugin
-  cp -a -- "$GBFC_ROOT/plugin.json" "$GBFC_PLUGIN_DIR/plugin.json"
-  cp -a -- "$GBFC_ROOT/mcp_config.json" "$GBFC_PLUGIN_DIR/mcp_config.json"
-  cp -a -- "$GBFC_ROOT/hooks.json" "$GBFC_PLUGIN_DIR/hooks.json"
 
   # Merge global router in ~/.gemini/GEMINI.md
   python3 - "$GBFC_GLOBAL_ROUTER" "$GBFC_ROOT/rules/AGENTS.md" <<'PY'
@@ -103,5 +111,5 @@ else:
 target.parent.mkdir(parents=True, exist_ok=True)
 target.write_text(new_content, encoding="utf-8")
 PY
-  gbfc_info "Router installed in $GBFC_PLUGIN_DIR and merged into $GBFC_GLOBAL_ROUTER"
+  gbfc_info "Router merged into $GBFC_GLOBAL_ROUTER"
 }

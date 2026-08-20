@@ -20,7 +20,7 @@ Do not infer a model provider from a logical model name. Treat custom-gateway al
 6. **Ordinary implementation** → write in this session. Use `/tdd` when test-first. Do **not** auto-start `/matt-implement`. There is no user `/implement` skill.
 7. **User asked for the Matt ticket loop** → `/matt-implement` only for a `/to-tickets` ticket.
 8. **Review** → in-session review. `/matt-code-review` only if the user asked for two-axis Standards + Spec. There is no user `/code-review` skill.
-9. **Verification** → pick a profile, then Read `~/.claude/antigravity-bestfriend/rules/01-verification.md`. Required configured failures block a completion claim.
+9. **Verification** → pick a profile, then Read `~/.gemini/antigravity-bestfriend/rules/01-verification.md`. Required configured failures block a completion claim.
 
 ## Knowledge
 
@@ -39,7 +39,7 @@ Do not infer a model provider from a logical model name. Treat custom-gateway al
 
 ## UI and browser
 
-- Matching or choosing a visual direction from the local design bank (Refero / Motionsites): `/found-this-design` first. Then `/impeccable` after a pick. Bank root comes from `~/.claude/antigravity-bestfriend/config/design-bank.json` (optional override `GROK_DESIGN_BANK` / `CLAUDE_DESIGN_BANK`).
+- Matching or choosing a visual direction from the local design bank (Refero / Motionsites): `/found-this-design` first. Then `/impeccable` after a pick. Bank root comes from `~/.gemini/antigravity-bestfriend/config/design-bank.json` (optional override `GROK_DESIGN_BANK` / `CLAUDE_DESIGN_BANK`).
 - Visual UI once a world is chosen or the brief is already visual: `/impeccable` first.
 - Design Intelligence is an internal, lazy retrieval stage of Impeccable `new-work`, never a primary route or specialist.
 - Installable UI components: MCP `shadcn` only. Do not add Magic UI, Kibo, 21st.dev, or community UI MCP servers.

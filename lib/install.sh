@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 
+gbfc_render_template() {
+  local src="$1" dest="$2"
+  python3 - "$src" "$dest" "$GBFC_MANAGED" "$GBFC_CBM_BIN" "$GBFC_CONTEXT_GUARD" <<'PY'
+import sys
+from pathlib import Path
+
+src_p, dest_p, managed, cbm, cg = sys.argv[1:6]
+text = Path(src_p).read_text(encoding="utf-8")
+text = text.replace("@MANAGED_ROOT@", managed)
+text = text.replace("@CODEBASE_MEMORY_BIN@", cbm)
+text = text.replace("@CONTEXT_GUARD_BIN@", cg)
+dest_path = Path(dest_p)
+dest_path.parent.mkdir(parents=True, exist_ok=True)
+dest_path.write_text(text, encoding="utf-8")
+PY
+}
+
 gbfc_write_manifest() {
   local tmp
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
@@ -8,19 +25,22 @@ gbfc_write_manifest() {
   fi
   mkdir -p -- "$GBFC_MANAGED/config"
   tmp="$(mktemp "$GBFC_MANAGED/.manifest.XXXXXX")"
-  python3 - "$tmp" "$GBFC_ROOT" "$GBFC_VENDOR_SOURCE" "$GBFC_MANAGED" "$GBFC_CBM_BIN" \
+  python3 - "$tmp" "$GBFC_ROOT" "$GBFC_MANAGED" "$GBFC_CBM_BIN" \
     "$(gbfc_product_version)" "$(gbfc_source_commit)" "$(gbfc_now)" \
     "${GBFC_DESIGN_BANK_CFG:-}" <<'PY'
 import hashlib, json, sys
 from pathlib import Path
 
-target, root, vendor_src, managed, cbm, version, commit, now, bank_cfg = sys.argv[1:10]
+target, root, managed, cbm, version, commit, now, bank_cfg = sys.argv[1:9]
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "0"*64
 
-allow = Path(vendor_src, "vendor/skill-allowlist.txt")
+allow = Path(managed, "vendor/skill-allowlist.txt")
+if not allow.is_file():
+    allow = Path(root, "vendor/skill-allowlist.txt")
 skills = [line.strip() for line in allow.read_text(encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")]
+
 hashes = {}
 for rel in (
     "vendor/skill-allowlist.txt",
@@ -30,7 +50,7 @@ for rel in (
     "vendor/sources.json",
     "vendor/inventory.json",
 ):
-    src = Path(vendor_src, rel)
+    src = Path(managed, rel)
     if not src.is_file():
         src = Path(root, rel)
     hashes[rel] = sha(src)
@@ -42,12 +62,18 @@ if src_file.is_file():
 
 design = {}
 if bank_cfg and Path(bank_cfg).is_file():
-    design = json.loads(Path(bank_cfg).read_text(encoding="utf-8"))
+    try:
+        design = json.loads(Path(bank_cfg).read_text(encoding="utf-8"))
+    except Exception:
+        pass
 
 ownership = {}
 own_path = Path(managed, "config/mcp-ownership.json")
 if own_path.is_file():
-    ownership = json.loads(own_path.read_text(encoding="utf-8"))
+    try:
+        ownership = json.loads(own_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
 
 payload = {
     "product": "antigravity-bestfriend",
@@ -57,7 +83,6 @@ payload = {
         "repo": "https://github.com/kuker24/AntiBestFriend",
         "commit": commit,
         "branch": "main",
-        "path": root,
     },
     "testedWithAgy": "1.1.17",
     "hashes": hashes,
@@ -69,7 +94,6 @@ payload = {
         "artifactSource": cbm_source,
         "version": "0.9.0",
     },
-    "adapterRoot": root,
     "managedRoot": managed,
     "contextGuard": {
         "runtime": str(Path(managed, "bin/agy-context-guard")),
@@ -83,7 +107,7 @@ PY
 }
 
 gbfc_ensure_mcp() {
-  local name state
+  local name
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
     gbfc_info "WOULD_MCP ensure codebase-memory-mcp context7 shadcn serena; exa absent"
     return 0
@@ -94,12 +118,12 @@ gbfc_ensure_mcp() {
   for name in codebase-memory-mcp context7 shadcn; do
     gbfc_info "Configuring MCP $name..."
     python3 "$GBFC_ROOT/lib/mcp.py" add --name "$name" --policy "$GBFC_ROOT/vendor/mcp-policy.json" \
-      || gbfc_die "failed to add MCP $name"
+      || gbfc_die "Failed to add MCP $name"
   done
 
   # Serena configured disabled by default (on-demand)
   python3 "$GBFC_ROOT/lib/mcp.py" add --name "serena" --policy "$GBFC_ROOT/vendor/mcp-policy.json" \
-    || gbfc_die "failed to configure serena MCP"
+    || gbfc_die "Failed to configure serena MCP"
 }
 
 gbfc_install_context_guard() {
@@ -126,51 +150,93 @@ gbfc_install_context_guard() {
   gbfc_info "CONTEXT_GUARD_READY"
 }
 
-gbfc_install_design_intelligence() {
+gbfc_package_self_contained_runtime() {
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
-    gbfc_info "WOULD_INSTALL_DESIGN_INTELLIGENCE"
+    gbfc_info "WOULD_PACKAGE_RUNTIME -> $GBFC_MANAGED"
     return 0
   fi
-  mkdir -p -- "$GBFC_MANAGED/lib"
+  mkdir -p -- "$GBFC_MANAGED/lib" "$GBFC_MANAGED/scripts" "$GBFC_MANAGED/vendor" "$GBFC_MANAGED/rules" "$GBFC_MANAGED/templates" "$GBFC_MANAGED/runtime" "$GBFC_MANAGED/overlays"
+
+  # Copy lib
+  cp -a -- "$GBFC_ROOT/lib/"*.sh "$GBFC_MANAGED/lib/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/lib/"*.py "$GBFC_MANAGED/lib/" 2>/dev/null || true
   rm -rf -- "$GBFC_MANAGED/lib/design_intelligence"
-  cp -a -- "$GBFC_ROOT/lib/design_intelligence" "$GBFC_MANAGED/lib/design_intelligence"
-  find "$GBFC_MANAGED/lib/design_intelligence" -type d -name __pycache__ -prune -exec rm -rf -- {} +
-  find "$GBFC_MANAGED/lib/design_intelligence" -type f -name '*.pyc' -delete
+  cp -a -- "$GBFC_ROOT/lib/design_intelligence" "$GBFC_MANAGED/lib/"
+  find "$GBFC_MANAGED/lib" -type d -name __pycache__ -prune -exec rm -rf -- {} +
+  find "$GBFC_MANAGED/lib" -type f -name '*.pyc' -delete
+
+  # Copy scripts, templates, vendor metadata, rules, overlays
+  cp -a -- "$GBFC_ROOT/scripts/"* "$GBFC_MANAGED/scripts/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/templates/"* "$GBFC_MANAGED/templates/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/vendor/"* "$GBFC_MANAGED/vendor/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/rules/"* "$GBFC_MANAGED/rules/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/overlays/"* "$GBFC_MANAGED/overlays/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/runtime/"* "$GBFC_MANAGED/runtime/" 2>/dev/null || true
+  cp -a -- "$GBFC_ROOT/VERSION" "$GBFC_MANAGED/VERSION"
+
+  gbfc_info "Self-contained managed runtime packaged in $GBFC_MANAGED"
+}
+
+gbfc_check_fault() {
+  local state="$1"
+  if [[ -n "${GBFC_FAIL_AT:-}" && "$GBFC_FAIL_AT" == "$state" ]]; then
+    gbfc_die "SIMULATED_FAULT at state $state"
+  fi
 }
 
 gbfc_run_install() {
-  [[ -d "$GBFC_VENDOR_SOURCE/vendor/skills" ]] || gbfc_die "vendor skills missing: $GBFC_VENDOR_SOURCE/vendor/skills"
-  [[ -f "$GBFC_VENDOR_SOURCE/vendor/skill-allowlist.txt" ]] || gbfc_die "missing skill-allowlist"
+  [[ -d "$GBFC_ROOT/vendor/skills" ]] || gbfc_die "vendor skills missing: $GBFC_ROOT/vendor/skills"
+  [[ -f "$GBFC_ROOT/vendor/skill-allowlist.txt" ]] || gbfc_die "missing skill-allowlist"
   gbfc_have python3 || gbfc_die "python3 required"
-  gbfc_have agy || gbfc_die "agy CLI required"
   gbfc_have node || gbfc_die "node required for shadcn pin"
   gbfc_have npx || gbfc_die "npx required for shadcn pin"
+
+  # Discover or recover agy
+  if ! gbfc_have agy && [[ -x "$HOME/.local/bin/agy-real" ]]; then
+    gbfc_install_agy_yolo_wrapper
+  fi
+  gbfc_have agy || gbfc_have agy-real || gbfc_die "agy CLI required"
 
   gbfc_lock_begin
   gbfc_tx_check_stale
   gbfc_tx_set_state PREPARING
+  gbfc_check_fault PREPARING
+
   mkdir -p -- "$GBFC_MANAGED/config" "$GBFC_MANAGED/tx" "$GBFC_MANAGED/bin" "$GBFC_MANAGED/components" "$GBFC_PLUGIN_DIR"
   gbfc_backup_owned
   gbfc_tx_set_state BACKED_UP
+  gbfc_check_fault BACKED_UP
 
+  gbfc_package_self_contained_runtime
   gbfc_install_codebase_memory
-  printf '%s\n' "$GBFC_ROOT" >"$GBFC_MANAGED/config/adapter-root.txt"
   gbfc_install_helper_bins
-  gbfc_install_design_intelligence
+  gbfc_tx_set_state WRAPPER_CONFIGURED
+  gbfc_check_fault WRAPPER_CONFIGURED
 
   gbfc_stage_skills
   gbfc_tx_set_state SKILLS_CONFIGURED
+  gbfc_check_fault SKILLS_CONFIGURED
+
   gbfc_swap_skills
   gbfc_install_router
   gbfc_tx_set_state RULES_CONFIGURED
+  gbfc_check_fault RULES_CONFIGURED
+
   gbfc_install_design_bank
   gbfc_tx_set_state DESIGN_CONFIGURED
+  gbfc_check_fault DESIGN_CONFIGURED
+
   gbfc_ensure_mcp
   gbfc_tx_set_state MCP_CONFIGURED
+  gbfc_check_fault MCP_CONFIGURED
+
   gbfc_install_context_guard
   gbfc_tx_set_state HOOKS_CONFIGURED
+  gbfc_check_fault HOOKS_CONFIGURED
+
   gbfc_write_manifest
   gbfc_tx_set_state VERIFIED
+  gbfc_check_fault VERIFIED
 
   if [[ "$GBFC_DRY_RUN" == 1 ]]; then
     gbfc_info "dry-run complete"

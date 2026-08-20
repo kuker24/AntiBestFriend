@@ -93,12 +93,7 @@ def ensure_overlay_body(text: str, name: str, extra: str) -> str:
     marker = overlay_marker(name)
     if marker not in extra:
         extra = f"{marker}\n\n{extra}"
-    if name not in ("ask-matt", "grill-with-docs"):
-        return prepend_after_frontmatter(text, extra)
-    head, body = split_frontmatter(text)
-    if marker in body:
-        return head + extra
-    return head + extra
+    return prepend_after_frontmatter(text, extra)
 
 
 def replace_all(text: str, pairs: list[tuple[str, str]]) -> str:
@@ -333,7 +328,16 @@ def apply_skill(dest: Path, name: str, prepend: str | None) -> None:
         text = SETUP_ANY_RE.sub("", text)
         text = text.replace("run `/setup-matt-pocock-skills` if not.", "")
 
+    # Universal path and residue replacements
     extras.extend([
+        ("~/.claude/grokbestfriend-claude/rules/", "~/.gemini/antigravity-bestfriend/rules/"),
+        ("$HOME/.claude/grokbestfriend-claude/rules/", "$HOME/.gemini/antigravity-bestfriend/rules/"),
+        ("~/.claude/grokbestfriend-claude/", "~/.gemini/antigravity-bestfriend/"),
+        ("$HOME/.claude/grokbestfriend-claude/", "$HOME/.gemini/antigravity-bestfriend/"),
+        ("~/.claude/skills/", "~/.gemini/config/plugins/antigravity-bestfriend/skills/"),
+        ("$HOME/.claude/skills/", "$HOME/.gemini/config/plugins/antigravity-bestfriend/skills/"),
+        ("grokbestfriend-claude", "antigravity-bestfriend"),
+        ("claude-gbf", "agy-bestfriend"),
         ("grok-chromium-cdp", "agy-chromium-cdp"),
         ("claude-chromium-cdp", "agy-chromium-cdp"),
         ("Bash", "run_command"),
@@ -363,6 +367,11 @@ def apply_skill(dest: Path, name: str, prepend: str | None) -> None:
         new = replace_all(
             body,
             [
+                ("~/.claude/grokbestfriend-claude/rules/", "~/.gemini/antigravity-bestfriend/rules/"),
+                ("$HOME/.claude/grokbestfriend-claude/rules/", "$HOME/.gemini/antigravity-bestfriend/rules/"),
+                ("~/.claude/grokbestfriend-claude/", "~/.gemini/antigravity-bestfriend/"),
+                ("$HOME/.claude/grokbestfriend-claude/", "$HOME/.gemini/antigravity-bestfriend/"),
+                ("~/.claude/skills/", "~/.gemini/config/plugins/antigravity-bestfriend/skills/"),
                 ("grok-chromium-cdp", "agy-chromium-cdp"),
                 ("claude-chromium-cdp", "agy-chromium-cdp"),
                 ("$HOME/.grok/bin/claude-chromium-cdp", "$HOME/.gemini/antigravity-bestfriend/bin/agy-chromium-cdp"),

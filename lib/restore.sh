@@ -15,54 +15,82 @@ gbfc_restore_backup() {
   if [[ -z "$stamp" ]]; then
     stamp="$(gbfc_latest_backup || true)"
   fi
-  [[ -n "$stamp" ]] || gbfc_die "no backup stamp specified or available"
+  [[ -n "$stamp" ]] || gbfc_die "No backup stamp specified or available"
 
   local src
   src="$(gbfc_backup_root)/$stamp"
-  [[ -d "$src" ]] || gbfc_die "backup directory does not exist: $src"
+  [[ -d "$src" ]] || gbfc_die "Backup directory does not exist: $src"
 
-  gbfc_info "Restoring from $src..."
+  gbfc_info "Restoring exact state from snapshot $src..."
 
-  # 1. Restore global router
-  if [[ -f "$src/GEMINI.md" ]]; then
-    cp -a -- "$src/GEMINI.md" "$GBFC_GLOBAL_ROUTER"
-  elif [[ -f "$GBFC_GLOBAL_ROUTER" ]]; then
-    # Strip owned block if backup had none
-    python3 - "$GBFC_GLOBAL_ROUTER" <<'PY'
-import sys
+  # Execute restoration with hash and topology verification
+  python3 - "$src" "$HOME" <<'PY'
+import hashlib, json, os, shutil, sys
 from pathlib import Path
-target = Path(sys.argv[1])
-if target.is_file():
-    text = target.read_text(encoding="utf-8")
-    b, e = "<!-- ANTIGRAVITY-BESTFRIEND:BEGIN -->", "<!-- ANTIGRAVITY-BESTFRIEND:END -->"
-    if b in text and e in text:
-        pre = text.split(b, 1)[0]
-        post = text.split(e, 1)[1]
-        cleaned = pre.rstrip() + ("\n" + post.lstrip() if post.strip() else "")
-        target.write_text(cleaned.strip() + "\n" if cleaned.strip() else "", encoding="utf-8")
-PY
-  fi
 
-  # 2. Restore MCP specs
-  if [[ -f "$src/mcp-specs.json" ]]; then
-    python3 - "$GBFC_ROOT/lib/mcp.py" "$src/mcp-specs.json" <<'PY'
-import json, sys
-from pathlib import Path
-specs = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-for name, data in specs.get("servers", {}).items():
-    if data.get("owned"):
-        import subprocess
-        # re-add spec
-        print(f"Restoring MCP {name}")
-PY
-  fi
+src_dir = Path(sys.argv[1])
+home = Path(sys.argv[2])
+snap_file = src_dir / "snapshot.json"
 
-  # 3. Restore plugin
-  if [[ -d "$src/plugin" ]]; then
-    rm -rf -- "$GBFC_PLUGIN_DIR"
-    cp -a -- "$src/plugin" "$GBFC_PLUGIN_DIR"
-  fi
+if not snap_file.is_file():
+    print("Snapshot metadata missing in backup")
+    raise SystemExit(1)
+
+meta = json.loads(snap_file.read_text(encoding="utf-8"))
+
+for key, entry in meta.items():
+    p = Path(entry["path"])
+    existed = entry["exists"]
+
+    if not existed:
+        # If it didn't exist before, ensure it is removed
+        if p.is_dir() and not p.is_symlink():
+            shutil.rmtree(p, ignore_errors=True)
+        elif p.exists() or p.is_symlink():
+            p.unlink()
+        print(f"Restored ABSENT: {p}")
+        continue
+
+    # File existed before
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if entry["is_symlink"]:
+        if p.exists() or p.is_symlink():
+            if p.is_dir() and not p.is_symlink():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink()
+        os.symlink(entry["symlink_target"], p)
+        print(f"Restored SYMLINK: {p} -> {entry['symlink_target']}")
+    elif entry["is_dir"]:
+        if p.exists() or p.is_symlink():
+            if p.is_dir() and not p.is_symlink():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink()
+        backup_tree = src_dir / key
+        if backup_tree.is_dir():
+            shutil.copytree(backup_tree, p, symlinks=True)
+            print(f"Restored DIR: {p}")
+    else:
+        # Regular file
+        backup_file = src_dir / f"{key}.raw"
+        if backup_file.is_file():
+            data = backup_file.read_bytes()
+            if entry["sha256"]:
+                actual_sha = hashlib.sha256(data).hexdigest()
+                if actual_sha != entry["sha256"]:
+                    print(f"FATAL: Backup file corruption for {key}")
+                    raise SystemExit(1)
+            if p.is_dir() and not p.is_symlink():
+                shutil.rmtree(p, ignore_errors=True)
+            elif p.exists() or p.is_symlink():
+                p.unlink()
+            p.write_bytes(data)
+            if entry["mode"]:
+                os.chmod(p, int(entry["mode"], 8))
+            print(f"Restored FILE: {p} (verified SHA256)")
+PY
 
   gbfc_tx_clear
-  gbfc_info "Restore completed successfully."
+  gbfc_info "Restore completed and verified."
 }

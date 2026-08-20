@@ -16,12 +16,12 @@ def parse_frontmatter(text: str) -> dict[str, str]:
     match = FRONTMATTER_RE.match(text)
     if not match:
         return {}
-    lines = match.group(1).splitlines()
+    fm_text = match.group(1)
     data = {}
-    for line in lines:
-        if ":" in line:
-            k, v = line.split(":", 1)
-            data[k.strip()] = v.strip().strip('"').strip("'")
+    for mf in re.finditer(r"^([a-zA-Z0-9_-]+):\s*(.*(?:\n(?![a-zA-Z0-9_-]+:).*)*)", fm_text, re.MULTILINE):
+        k = mf.group(1).strip()
+        v = mf.group(2).strip().strip('"\'')
+        data[k] = v
     return data
 
 

@@ -63,7 +63,7 @@ def resolve_policy(
     env = os.environ.get("GBFC_MANAGED")
     if env:
         return load_policy(managed_paths(Path(env))["config"])
-    live = Path.home() / ".claude" / "grokbestfriend-claude" / "config" / "context-guard.json"
+    live = Path.home() / ".gemini" / "antigravity-bestfriend" / "config" / "context-guard.json"
     return load_policy(live if live.is_file() else None)
 
 

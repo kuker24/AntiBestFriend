@@ -23,7 +23,7 @@ MANAGED_REL = (
     ("design_bank", "config/design-bank.json"),
     ("hook_ownership", "config/hook-ownership.json"),
     ("context_guard_config", "config/context-guard.json"),
-    ("context_guard_bin", "bin/gbfc-context-guard"),
+    ("context_guard_bin", "bin/agy-context-guard"),
     ("context_guard_lib", "lib/context_guard"),
     ("managed_rules", "rules"),
     ("managed_bin", "bin"),
@@ -93,7 +93,7 @@ def load_allowlist(path: Path) -> list[str]:
 
 
 def _user_bin_claude_gbf() -> Path:
-    return Path.home() / ".local" / "bin" / "claude-gbf"
+    return Path.home() / ".local" / "bin" / "agy-bestfriend"
 
 
 def _owned_user_bin_symlink(link: Path, managed: Path) -> bool:
@@ -103,7 +103,7 @@ def _owned_user_bin_symlink(link: Path, managed: Path) -> bool:
         target = link.readlink()
     except OSError:
         return False
-    expected = (Path(managed) / "bin" / "claude-gbf")
+    expected = (Path(managed) / "bin" / "agy-bestfriend")
     return Path(target) == expected
 
 
@@ -228,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.cmd == "snapshot":
         payload = snapshot(
-            claude_home=Path(args.claude_home),
+            claude_home=Path(args.gemini_home),
             managed=Path(args.managed),
             skills=Path(args.skills),
             allowlist=load_allowlist(Path(args.allowlist)),
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
     lock_dir = Path(args.lock_dir) if args.lock_dir else None
     removed = apply_tombstones(
         presence,
-        claude_home=Path(args.claude_home),
+        claude_home=Path(args.gemini_home),
         managed=Path(args.managed),
         skills=Path(args.skills),
         owned_command=command,

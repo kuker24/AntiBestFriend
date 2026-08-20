@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Classify and mutate Antigravity MCP servers. Zero secret exposure. Zero Exa."""
+"""Classify and mutate Antigravity MCP servers. Foreign-safe. Zero secret exposure. Zero Exa."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
-import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -30,32 +29,48 @@ def ownership_path() -> Path:
     return Path(os.environ.get("GBFC_OWNERSHIP", managed_dir() / "config" / "mcp-ownership.json"))
 
 
-def load_json(path: Path, default):
+def load_raw_json(path: Path) -> tuple[dict | None, str | None]:
     if not path.is_file():
-        return default
+        return {"mcpServers": {}}, None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return default
+        content = path.read_text(encoding="utf-8")
+        if not content.strip():
+            return {"mcpServers": {}}, None
+        data = json.loads(content)
+        if not isinstance(data, dict):
+            return None, "Root JSON must be an object"
+        data.setdefault("mcpServers", {})
+        return data, None
+    except Exception as e:
+        return None, str(e)
 
 
-def save_json(path: Path, data) -> None:
+def save_mcp_config(data: dict) -> None:
+    path = mcp_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_suffix(".tmp." + str(os.getpid()))
     tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     tmp.chmod(0o600)
     tmp.replace(path)
 
 
 def owned_map() -> dict:
-    data = load_json(ownership_path(), {"servers": {}})
-    if not isinstance(data, dict):
+    path = ownership_path()
+    if not path.is_file():
         return {"servers": {}}
-    data.setdefault("servers", {})
-    return data
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            data.setdefault("servers", {})
+            return data
+    except Exception:
+        pass
+    return {"servers": {}}
 
 
 def record_owned(name: str, spec: dict) -> None:
+    path = ownership_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     data = owned_map()
     data["product"] = PRODUCT
     data["servers"][name] = {
@@ -63,31 +78,41 @@ def record_owned(name: str, spec: dict) -> None:
         "owned": True,
         "spec": spec,
     }
-    save_json(ownership_path(), data)
+    tmp = path.with_suffix(".tmp." + str(os.getpid()))
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.chmod(0o600)
+    tmp.replace(path)
 
 
 def unrecord(name: str) -> None:
+    path = ownership_path()
+    if not path.is_file():
+        return
     data = owned_map()
     data.get("servers", {}).pop(name, None)
-    save_json(ownership_path(), data)
+    tmp = path.with_suffix(".tmp." + str(os.getpid()))
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    tmp.chmod(0o600)
+    tmp.replace(path)
 
 
-def load_mcp_config() -> dict:
-    data = load_json(mcp_config_path(), {})
-    if not isinstance(data, dict):
-        return {"mcpServers": {}}
-    data.setdefault("mcpServers", {})
-    return data
-
-
-def save_mcp_config(data: dict) -> None:
-    save_json(mcp_config_path(), data)
+def resolve_spec(spec: dict) -> dict:
+    resolved = dict(spec)
+    cmd = resolved.get("command", "")
+    if cmd == "@CODEBASE_MEMORY_BIN@" or resolved.get("commandKind") == "owned-binary":
+        resolved["command"] = os.environ.get(
+            "GBFC_CBM_BIN",
+            str(managed_dir() / "components/codebase-memory/bin/codebase-memory-mcp")
+        )
+    return resolved
 
 
 def classify(name: str, wanted: dict) -> dict:
     if name == "exa":
         return {"name": "exa", "state": "FORBIDDEN_OMITTED"}
-    cfg = load_mcp_config()
+    cfg, err = load_raw_json(mcp_config_path())
+    if err:
+        return {"name": name, "state": "INVALID_CONFIG", "error": err}
     servers = cfg.get("mcpServers") or {}
     own = owned_map().get("servers") or {}
     if name not in servers:
@@ -95,58 +120,92 @@ def classify(name: str, wanted: dict) -> dict:
     existing = servers[name]
     if name in own:
         return {"name": name, "state": "EXISTING_OWNED", "info": existing}
-    if wanted.get("serverUrl") and existing.get("serverUrl") == wanted["serverUrl"]:
+
+    # Compare with wanted spec
+    resolved = resolve_spec(wanted)
+    if resolved.get("serverUrl") and existing.get("serverUrl") == resolved["serverUrl"]:
         return {"name": name, "state": "EXISTING_EQUIVALENT_FOREIGN", "info": existing}
-    if wanted.get("command") and existing.get("command") == wanted["command"]:
+    if resolved.get("command") and existing.get("command") == resolved["command"]:
         return {"name": name, "state": "EXISTING_EQUIVALENT_FOREIGN", "info": existing}
     return {"name": name, "state": "EXISTING_CONFLICT_FOREIGN", "info": existing}
 
 
 def ensure_server(name: str, spec: dict, enabled: bool = True) -> int:
     if name == "exa":
-        sys.stderr.write("refusing to add Exa MCP\n")
+        sys.stderr.write("Refusing to configure Exa MCP (strictly omitted in AntiBestFriend)\n")
         return 1
-    cfg = load_mcp_config()
-    cfg.setdefault("mcpServers", {})
 
+    cfg, err = load_raw_json(mcp_config_path())
+    if err:
+        sys.stderr.write(f"FAIL CLOSED: Malformed MCP config: {err}\n")
+        return 2
+
+    cls = classify(name, spec)
+    if cls["state"] == "EXISTING_CONFLICT_FOREIGN":
+        sys.stderr.write(f"CONFLICT: MCP server {name} exists with foreign configuration. Not overwriting.\n")
+        return 3
+    if cls["state"] == "EXISTING_EQUIVALENT_FOREIGN":
+        print(f"Reusing foreign equivalent MCP server {name} (FOREIGN_SHARED)")
+        return 0
+
+    resolved = resolve_spec(spec)
     server_entry = {}
-    if spec.get("serverUrl") or spec.get("url"):
-        server_entry["serverUrl"] = spec.get("serverUrl") or spec.get("url")
+    if resolved.get("serverUrl") or resolved.get("url"):
+        server_entry["serverUrl"] = resolved.get("serverUrl") or resolved.get("url")
     else:
-        cmd = spec.get("command")
-        if spec.get("commandKind") == "owned-binary" or not cmd:
-            cmd = os.environ.get("GBFC_CBM_BIN", str(managed_dir() / "components/codebase-memory/bin/codebase-memory-mcp"))
-        server_entry["command"] = cmd
-        server_entry["args"] = spec.get("args") or []
+        server_entry["command"] = resolved.get("command")
+        server_entry["args"] = resolved.get("args") or []
 
-    # Use explicit enabled flag from spec if present
-    if "enabled" in spec:
-        server_entry["disabled"] = not spec["enabled"]
-    elif "disabled" in spec:
-        server_entry["disabled"] = spec["disabled"]
+    if "enabled" in resolved:
+        server_entry["disabled"] = not resolved["enabled"]
+    elif "disabled" in resolved:
+        server_entry["disabled"] = resolved["disabled"]
     else:
         server_entry["disabled"] = not enabled
 
     cfg["mcpServers"][name] = server_entry
     save_mcp_config(cfg)
     record_owned(name, server_entry)
-    print(f"Added/Updated MCP server {name}")
+    print(f"Added/Updated owned MCP server {name}")
     return 0
 
 
 def remove_server(name: str) -> int:
-    cfg = load_mcp_config()
+    own = owned_map().get("servers") or {}
+    if name not in own:
+        print(f"Skipping MCP {name}: not owned by AntiBestFriend (FOREIGN_PRESERVED)")
+        return 0
+
+    cfg, err = load_raw_json(mcp_config_path())
+    if err:
+        sys.stderr.write(f"FAIL CLOSED: Malformed MCP config: {err}\n")
+        return 2
+
     if name in cfg.get("mcpServers", {}):
         del cfg["mcpServers"][name]
         save_mcp_config(cfg)
     unrecord(name)
-    print(f"Removed MCP server {name}")
+    print(f"Removed owned MCP server {name}")
     return 0
 
 
-def snapshot_owned(out: Path) -> None:
-    data = owned_map()
-    save_json(out, data)
+def snapshot_bytes(out_path: Path) -> None:
+    p = mcp_config_path()
+    if p.is_file():
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(p.read_bytes())
+
+
+def restore_exact_bytes(src_path: Path) -> bool:
+    if not src_path.is_file():
+        return False
+    data = src_path.read_bytes()
+    expected_sha = hashlib.sha256(data).hexdigest()
+    target = mcp_config_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    got_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+    return got_sha == expected_sha
 
 
 def main() -> int:
@@ -155,9 +214,12 @@ def main() -> int:
     parser.add_argument("--name")
     parser.add_argument("--policy", default="")
     parser.add_argument("--out", default="")
-    parser.add_argument("--spec", default="")
+    parser.add_argument("--src", default="")
     args = parser.parse_args()
-    policy = load_json(Path(args.policy), {"servers": {}}) if args.policy else {"servers": {}}
+
+    policy = {}
+    if args.policy and Path(args.policy).is_file():
+        policy = json.loads(Path(args.policy).read_text(encoding="utf-8"))
 
     if args.cmd == "classify":
         wanted = (policy.get("servers") or {}).get(args.name) or {}
@@ -176,14 +238,12 @@ def main() -> int:
         return ensure_server(args.name, wanted)
     if args.cmd == "remove":
         return remove_server(args.name)
-    if args.cmd == "snapshot-owned":
-        out = Path(args.out)
-        snapshot_owned(out)
-        return 0 if out.is_file() else 1
-    if args.cmd == "list-names":
-        cfg = load_mcp_config()
-        print("\n".join(cfg.get("mcpServers", {}).keys()))
+    if args.cmd == "snapshot":
+        snapshot_bytes(Path(args.out))
         return 0
+    if args.cmd == "restore":
+        ok = restore_exact_bytes(Path(args.src))
+        return 0 if ok else 1
     return 2
 
 

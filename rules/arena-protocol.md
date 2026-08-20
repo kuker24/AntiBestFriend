@@ -2,11 +2,11 @@
 
 Used by `/architect` and optionally by `/blast-radius`. Do **not** invoke `/arena` from another manual skill. Path after install:
 
-`~/.claude/grokbestfriend-claude/rules/arena-protocol.md`
+`~/.gemini/antigravity-bestfriend/rules/arena-protocol.md`
 
 ## Model pool
 
-Read `~/.claude/grokbestfriend-claude/config/model-pool.json` if it exists.
+Read `~/.gemini/antigravity-bestfriend/config/model-pool.json` if it exists.
 
 - Missing file or every role is `inherit-parent` → all candidates inherit the parent model. Set `MODEL_DIVERSITY=false`. Do not invent commercial slugs.
 - Same-model N candidates are allowed. Label them honestly (`candidate-1` …), not as different families.

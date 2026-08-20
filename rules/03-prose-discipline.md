@@ -2,7 +2,7 @@
 
 Read this file when editing user-facing prose or when `/unslop` / `/technical-writing` says to. Do not `@`-import it. Path after install:
 
-`~/.claude/grokbestfriend-claude/rules/03-prose-discipline.md`
+`~/.gemini/antigravity-bestfriend/rules/03-prose-discipline.md`
 
 This is not a skill. It does not auto-apply. It does not rewrite code.
 

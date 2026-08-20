@@ -40,13 +40,18 @@ while [[ $# -gt 0 ]]; do
     --dry-run) GBFC_DRY_RUN=1 ;;
     --doctor) mode="doctor" ;;
     --repair) GBFC_REPAIR=1 ;;
-    --restore) mode="restore" ;;
-    --recover) mode="recover" ;;
     --skip-design-bank) GBFC_SKIP_DESIGN_BANK=1 ;;
-    --skip-tools) GBFC_SKIP_TOOLS=1 ;;
-    -h|--help) usage; exit 0 ;;
+    --help|-h) usage; exit 0 ;;
+    --restore)
+      mode="restore"
+      if [[ $# -ge 2 && ! "$2" =~ ^-- ]]; then
+        shift
+        restore_stamp="$1"
+      fi
+      ;;
+    --recover) mode="recover" ;;
     *)
-      if [[ "$mode" == "restore" && -z "$restore_stamp" && "$1" != --* ]]; then
+      if [[ "$mode" == "restore" && -z "$restore_stamp" ]]; then
         restore_stamp="$1"
       else
         gbfc_die "Unknown argument: $1"
@@ -65,16 +70,17 @@ case "$mode" in
     source "$ROOT/lib/restore.sh"
     gbfc_lock_begin
     trap 'gbfc_lock_end' EXIT
+    if [[ -z "$restore_stamp" ]]; then
+      restore_stamp="$(gbfc_tx_backup_stamp)"
+    fi
+    [[ -n "$restore_stamp" ]] || gbfc_die "no backup stamp specified"
     gbfc_restore_backup "$restore_stamp"
+    gbfc_tx_clear
     ;;
   recover)
-    # shellcheck source=/dev/null
-    source "$ROOT/lib/restore.sh"
     gbfc_lock_begin
     trap 'gbfc_lock_end' EXIT
-    stamp="$(gbfc_latest_backup || true)"
-    [[ -n "$stamp" ]] || { gbfc_lock_end; gbfc_die "no backup to recover"; }
-    gbfc_restore_backup "$stamp"
+    gbfc_tx_recover
     ;;
   install)
     trap 'gbfc_lock_end' EXIT
