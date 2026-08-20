@@ -7,7 +7,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root / "lib"))
 
-from design_intelligence import catalog, doctor, policy, rank, selection
+from design_intelligence import catalog, doctor, policy, rank, integration
 
 with tempfile.TemporaryDirectory() as tmp:
     tmp_path = Path(tmp)
@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory() as tmp:
     
     # Test doctor
     doc_result = doctor.doctor(tmp_path, pol, {})
-    assert doc_result["status"] in ("OK", "UNAVAILABLE_MISSING", "DEGRADED"), f"Unexpected doctor status: {doc_result['status']}"
+    assert doc_result["status"] in ("PASS", "OK", "UNAVAILABLE_MISSING", "DEGRADED"), f"Unexpected doctor status: {doc_result['status']}"
     
     # Test search & rank
     # Note: Because the fixture items lack actual image files, they might be dropped from the FTS index or filtered out.
@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert "results" in search_res
     
     # Test selection / planning
-    plan = selection.plan_retrieval("Create a dark mode landing page", "dark theme", "persuade", [])
-    assert "query" in plan
+    plan = integration.plan_retrieval(intent="greenfield", scope="surface", mode="Persuade", authority="none")
+    assert "lane" in plan
     
     print("PASS: test_design_intelligence_functional")

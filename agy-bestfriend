@@ -84,12 +84,10 @@ case "$cmd" in
   skills)
     case "${1:-}" in
       list)
-        local resolved_plugin_dir
         resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
         ls -1 "$resolved_plugin_dir/skills" 2>/dev/null || ls -1 "$GBFC_MANAGED/skills" 2>/dev/null || ls -1 "$ROOT/vendor/skills"
         ;;
       verify)
-        local resolved_plugin_dir
         resolved_plugin_dir="$(gbfc_resolve_plugin_dir)"
         python3 "$ROOT/lib/validate_skills.py" \
           --skills "$resolved_plugin_dir/skills" \
